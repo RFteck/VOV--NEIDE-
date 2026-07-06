@@ -1,0 +1,2540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doces e Salgados da Vovó Neide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;0,900;1,600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- FIREBASE: guarda todos os dados da loja (produtos, pedidos, cupons, clientes...) na nuvem,
+     assim funciona em qualquer celular/computador e nunca perde dado ao trocar de aparelho. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#FFF7EE; --paper:#FFFFFF; --ink:#4A2711; --ink-soft:#8A6A52;
+    --orange:#FF6A00; --orange-dark:#D9480F; --orange-deep:#7A2E00; --gold:#FFB703;
+    --line:#F1D9BE; --success:#3C8D40; --danger:#D6483A;
+    --radius:16px; --shadow:0 10px 30px rgba(122,46,0,0.12);
+    --star:#FFB703;
+  }
+  html[data-tema="escuro"]{
+    --bg:#20140B; --paper:#2B1B10; --ink:#F6E8D8; --ink-soft:#C8A98A;
+    --line:#4A3320; --shadow:0 10px 30px rgba(0,0,0,0.45);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Poppins',sans-serif;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s;}
+  h1,h2,h3,h4{font-family:'Fraunces',serif;color:var(--orange-deep);margin:0 0 6px;}
+  html[data-tema="escuro"] h1,html[data-tema="escuro"] h2,html[data-tema="escuro"] h3,html[data-tema="escuro"] h4{color:var(--gold);}
+  button{font-family:inherit;cursor:pointer;}
+  a{color:inherit;}
+  .hidden{display:none !important;}
+  :focus-visible{outline:3px solid var(--orange-dark);outline-offset:2px;}
+  .muted{color:var(--ink-soft);font-size:.85rem;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+
+  /* ---------- TOPO ---------- */
+  .topbar{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;flex-wrap:wrap;}
+  .logo-circulo{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--orange),var(--gold));display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;box-shadow:var(--shadow);}
+  .topbar-textos{flex-grow:1;min-width:140px;}
+  .topbar-textos h1{font-size:1.3rem;line-height:1.1;}
+  .topbar-textos p{margin:0;font-size:.8rem;color:var(--ink-soft);}
+  .topbar-acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .icon-btn{background:none;border:1px solid var(--line);border-radius:999px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:var(--ink);position:relative;}
+  .icon-btn .badge-mini{position:absolute;top:-4px;right:-4px;background:var(--orange);color:#fff;font-size:.6rem;border-radius:999px;padding:1px 5px;}
+  select#seletorIdioma{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:var(--paper);color:var(--ink);font-size:.78rem;}
+
+  .badge-horario{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:600;padding:5px 12px;border-radius:999px;margin:8px auto 0;width:fit-content;}
+  .badge-horario.aberto{background:#E9F6EA;color:var(--success);}
+  .badge-horario.fechado{background:#F6DEDE;color:var(--danger);}
+
+  .banners-carrossel{max-width:640px;margin:14px auto 0;padding:0 16px;}
+  .banner-slide{background:linear-gradient(120deg,var(--orange),var(--gold));color:#fff;padding:14px 18px;border-radius:14px;font-weight:600;font-size:.88rem;text-align:center;box-shadow:var(--shadow);}
+
+  .promo-countdown{max-width:520px;margin:10px auto 0;padding:0 16px;text-align:center;}
+  .promo-countdown-box{background:var(--orange-deep);color:#fff;padding:8px 14px;border-radius:12px;font-size:.82rem;font-weight:600;}
+
+  .hero{padding:24px 22px 16px;text-align:center;background:radial-gradient(circle at 50% 0%, #FFE8CC 0%, var(--bg) 65%);}
+  html[data-tema="escuro"] .hero{background:radial-gradient(circle at 50% 0%, #3a2410 0%, var(--bg) 65%);}
+  .hero h2{font-size:1.6rem;font-style:italic;max-width:520px;margin:0 auto 8px;}
+  .hero p{color:var(--ink-soft);max-width:440px;margin:0 auto;font-size:.9rem;}
+
+  .busca-wrap{max-width:420px;margin:18px auto 0;padding:0 10px;display:flex;gap:8px;}
+  #buscaInput{flex-grow:1;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:.95rem;}
+  #btnFiltros{flex-shrink:0;border:1px solid var(--orange);background:var(--paper);color:var(--orange-dark);border-radius:999px;padding:0 16px;font-weight:600;font-size:.85rem;}
+
+  /* Filtros painel */
+  .painel-filtros{max-width:420px;margin:10px auto 0;padding:14px 16px;background:var(--paper);border:1px solid var(--line);border-radius:14px;}
+  .painel-filtros label{font-size:.78rem;font-weight:600;margin:8px 0 3px;}
+  .faixa-preco{display:flex;align-items:center;gap:8px;font-size:.8rem;}
+  .chips-filtro{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+  .chip-filtro{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 12px;font-size:.76rem;}
+  .chip-filtro.ativo{background:var(--orange);border-color:var(--orange);color:#fff;}
+
+  /* ---------- CATEGORIAS ---------- */
+  .categorias-nav{display:flex;gap:8px;overflow-x:auto;padding:16px 22px 6px;-ms-overflow-style:none;scrollbar-width:none;}
+  .categorias-nav::-webkit-scrollbar{display:none;}
+  .cat-btn{flex-shrink:0;padding:8px 18px;border-radius:999px;border:1.5px solid var(--orange);background:transparent;color:var(--orange-dark);font-weight:600;font-size:.85rem;transition:.15s;}
+  .cat-btn.ativo{background:var(--orange);color:#fff;}
+
+  .secao-titulo{max-width:1080px;margin:18px auto 0;padding:0 22px;display:flex;align-items:center;justify-content:space-between;}
+  .secao-titulo h3{font-size:1.1rem;}
+  .carrossel-destaques{display:flex;gap:14px;overflow-x:auto;max-width:1080px;margin:8px auto 0;padding:2px 22px 12px;}
+
+  /* ---------- PRODUTOS ---------- */
+  .produtos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px;padding:14px 22px 40px;max-width:1080px;margin:0 auto;}
+  .produto-card{background:var(--paper);border-radius:var(--radius);padding:0 0 16px;box-shadow:var(--shadow);position:relative;display:flex;flex-direction:column;border:1px solid var(--line);overflow:hidden;flex-shrink:0;}
+  .carrossel-destaques .produto-card{width:200px;}
+  .produto-foto-wrap{position:relative;height:130px;background:var(--bg);}
+  .produto-foto-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+  .produto-foto-wrap .produto-icon-fallback{font-size:2.6rem;display:flex;align-items:center;justify-content:center;height:100%;}
+  .btn-fav{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.9);border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+  .btn-fav.ativo{color:var(--danger);}
+  .badge-esgotado{position:absolute;bottom:8px;left:8px;background:var(--danger);color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:999px;}
+  .produto-corpo{padding:12px 16px 0;display:flex;flex-direction:column;flex-grow:1;}
+  .produto-card h3{font-size:1.02rem;margin-bottom:2px;cursor:pointer;}
+  .produto-desc{font-size:.78rem;color:var(--ink-soft);margin:0 0 6px;}
+  .estrelas{color:var(--star);font-size:.8rem;letter-spacing:1px;}
+  .estrelas-num{font-size:.72rem;color:var(--ink-soft);margin-left:4px;}
+  .badge-destaque{position:absolute;top:8px;left:8px;background:var(--gold);color:var(--orange-deep);font-size:.65rem;font-weight:700;padding:4px 10px;border-radius:999px;box-shadow:0 3px 8px rgba(0,0,0,.15);z-index:2;}
+  .tag-preco{display:inline-block;align-self:flex-start;background:var(--orange-deep);color:#fff;font-family:'Fraunces',serif;font-weight:700;font-size:.92rem;padding:5px 12px;border-radius:6px 6px 6px 0;margin:8px 0 10px;}
+  .btn-add{width:calc(100% - 32px);margin:0 16px;padding:10px;border:none;border-radius:10px;background:var(--orange);color:#fff;font-weight:600;font-size:.88rem;transition:.15s;}
+  .btn-add:hover{background:var(--orange-dark);}
+  .btn-add:disabled{background:#cfcfcf;cursor:not-allowed;}
+  .vazio{color:var(--ink-soft);text-align:center;padding:30px 10px;grid-column:1/-1;}
+
+  /* ---------- FOOTER ---------- */
+  footer{background:var(--orange-deep);color:#FFE9D2;padding:30px 22px 90px;text-align:center;}
+  footer h4{color:#fff;font-size:1rem;}
+  .footer-links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:14px 0;}
+  .footer-links a,.link-admin{display:inline-block;padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.35);font-size:.82rem;text-decoration:none;color:#fff;background:none;}
+  .footer-fine{font-size:.72rem;opacity:.7;margin-top:16px;}
+
+  .bubble-stack{position:fixed;left:16px;bottom:20px;display:flex;flex-direction:column;gap:10px;z-index:30;}
+  .bubble{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);text-decoration:none;transition:.15s;}
+  .bubble:hover{transform:scale(1.08);}
+  .bubble-ig{background:radial-gradient(circle at 30% 110%, #ffdd55, #ff543e 45%, #c837ab 75%, #5851d8);}
+  .bubble-wa{background:#25D366;}
+  .bubble svg{width:26px;height:26px;fill:#fff;}
+
+  #fabCarrinho{position:fixed;right:16px;bottom:20px;z-index:30;background:var(--orange);color:#fff;border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:.95rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px;}
+  #cartCount{background:#fff;color:var(--orange-dark);border-radius:50%;padding:2px 8px;font-size:.8rem;}
+
+  /* ---------- MODAIS ---------- */
+  .modal{position:fixed;inset:0;background:rgba(20,10,4,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;}
+  @media(min-width:640px){.modal{align-items:center;}}
+  .modal-box{background:var(--bg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:22px;position:relative;}
+  @media(min-width:640px){.modal-box{border-radius:22px;}}
+  .modal-box.largo{max-width:640px;}
+  .modal-fechar{position:absolute;top:14px;right:16px;background:none;border:none;font-size:1.4rem;color:var(--ink-soft);}
+
+  .cart-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);}
+  .cart-item-info{display:flex;flex-direction:column;font-size:.86rem;}
+  .qty-control{display:flex;align-items:center;gap:8px;}
+  .qty-control button{width:26px;height:26px;border-radius:50%;border:1px solid var(--orange);background:#fff;color:var(--orange-dark);font-weight:700;}
+  .cart-item-total{font-weight:600;min-width:70px;text-align:right;font-size:.86rem;}
+  .brinde-linha{background:#E9F6EA;color:var(--success);padding:8px 10px;border-radius:8px;font-size:.8rem;margin-top:8px;}
+
+  .recibo{background:#fff;color:#222;border:1px dashed var(--orange-dark);border-radius:10px;padding:16px;font-family:'Poppins',monospace;font-size:.85rem;margin:16px 0;box-shadow:var(--shadow);}
+  .recibo-linha{display:flex;justify-content:space-between;padding:3px 0;}
+  .recibo-linha.total{border-top:1px dashed var(--line);margin-top:6px;padding-top:8px;font-weight:700;font-size:1rem;}
+
+  label{display:block;font-size:.82rem;font-weight:600;margin:12px 0 4px;}
+  input[type="text"],input[type="tel"],input[type="number"],input[type="date"],input[type="time"],input[type="password"],select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:.9rem;font-family:inherit;}
+  textarea{resize:vertical;min-height:60px;}
+  .radio-linha{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.88rem;}
+  .radio-linha input{width:auto;}
+  .btn-primario{width:100%;padding:13px;border:none;border-radius:12px;background:var(--orange);color:#fff;font-weight:700;font-size:.95rem;margin-top:14px;}
+  .btn-primario:disabled{background:#e0b58f;cursor:not-allowed;}
+  .btn-secundario{width:100%;padding:10px;border:1px solid var(--orange);background:var(--paper);color:var(--orange-dark);border-radius:10px;font-weight:600;font-size:.85rem;}
+  .cupom-linha{display:flex;gap:8px;}
+  .cupom-linha button{flex-shrink:0;padding:0 16px;border:none;border-radius:10px;background:var(--orange-deep);color:#fff;font-weight:600;}
+  .cupom-ok{background:#E9F6EA;color:var(--success);padding:8px 12px;border-radius:8px;font-size:.82rem;margin-top:8px;}
+  .pix-info{background:#FFF3E0;border:1px solid var(--gold);padding:10px 12px;border-radius:8px;font-size:.82rem;margin-top:8px;color:#4A2711;}
+
+  .produto-detalhe-img{width:100%;height:180px;object-fit:cover;border-radius:14px;margin-bottom:10px;}
+  .grupo-opcao{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px;}
+  .grupo-opcao h4{font-size:.85rem;margin:0 0 6px;}
+  .opcao-linha{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:.85rem;}
+  .info-tabela{width:100%;font-size:.8rem;border-collapse:collapse;margin-top:6px;}
+  .info-tabela td{padding:3px 4px;border-bottom:1px dashed var(--line);}
+  .tag-alerg{display:inline-block;background:#F6DEDE;color:var(--danger);font-size:.68rem;padding:3px 8px;border-radius:999px;margin:2px 3px 0 0;}
+  .tag-ing{display:inline-block;background:var(--bg);border:1px solid var(--line);font-size:.7rem;padding:3px 8px;border-radius:999px;margin:2px 3px 0 0;}
+  .avaliacao-item{border-bottom:1px solid var(--line);padding:10px 0;}
+  .avaliacao-item .estrelas{font-size:.9rem;}
+  .barra-passos{display:flex;justify-content:space-between;margin:16px 0;}
+  .passo{flex:1;text-align:center;font-size:.7rem;color:var(--ink-soft);position:relative;}
+  .passo .bola{width:26px;height:26px;border-radius:50%;background:var(--line);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;font-weight:700;font-size:.78rem;}
+  .passo.ativo .bola,.passo.feito .bola{background:var(--orange);color:#fff;}
+
+  /* ---------- ADMIN ---------- */
+  #adminView{max-width:1040px;margin:0 auto;padding:20px;}
+  .admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .admin-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+  .admin-tab-btn{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);font-size:.82rem;font-weight:600;color:var(--ink-soft);}
+  .admin-tab-btn.ativo{background:var(--orange);color:#fff;border-color:var(--orange);}
+  .admin-card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
+  .admin-row{display:grid;grid-template-columns:1.5fr 1fr auto;gap:10px;align-items:center;padding:12px 6px;border-bottom:1px solid var(--line);font-size:.85rem;}
+  .cliente-row{grid-template-columns:1fr 1fr 1.4fr;}
+  .pedido-row{grid-template-columns:1fr 1.3fr auto auto;}
+  .admin-row-actions{display:flex;gap:6px;}
+  .admin-row-actions button{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:.78rem;}
+  .btn-danger{color:var(--danger);border-color:var(--danger) !important;}
+  .chip{display:inline-block;background:var(--bg);border:1px solid var(--line);padding:2px 9px;border-radius:999px;font-size:.72rem;margin-right:4px;}
+  .chip-destaque{background:var(--gold);border-color:var(--gold);}
+  .chip-off{background:#f3d9d9;border-color:var(--danger);color:var(--danger);}
+  .chips-wrap{display:flex;flex-wrap:wrap;gap:4px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .form-grid .full{grid-column:1/-1;}
+  .checkbox-linha{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.85rem;}
+  .checkbox-linha input{width:auto;}
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .dash-kpi{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;}
+  .dash-kpi .num{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--orange-deep);}
+  .dash-kpi .lbl{font-size:.72rem;color:var(--ink-soft);}
+  canvas{max-width:100%;}
+  .grafico-wrap{position:relative;height:220px;}
+  .grafico-erro{color:var(--ink-soft);font-size:.85rem;padding:20px 0;text-align:center;}
+  .tag-input-wrap{display:flex;gap:6px;}
+  .tag-input-wrap input{flex-grow:1;}
+  .tag-input-wrap button{flex-shrink:0;padding:0 12px;border:1px solid var(--orange);background:var(--paper);color:var(--orange-dark);border-radius:10px;font-weight:600;}
+
+  #toastStack{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--orange-deep);color:#fff;padding:10px 18px;border-radius:999px;font-size:.85rem;box-shadow:var(--shadow);opacity:1;transition:opacity .3s;}
+  .toast.sair{opacity:0;}
+
+  @media(max-width:480px){
+    .admin-row,.cliente-row,.pedido-row{grid-template-columns:1fr;}
+    .form-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div id="toastStack"></div>
+
+<!-- ================= POPUP DE DESCONTO ================= -->
+<div id="popupDescontoModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('popupDescontoModal')">✕</button>
+    <h3 id="popupDescontoTitulo">🎉 Oferta especial!</h3>
+    <p id="popupDescontoTexto" class="muted"></p>
+    <button class="btn-primario" onclick="closeModal('popupDescontoModal')" data-i18n="popup_ok">Aproveitar</button>
+  </div>
+</div>
+
+<!-- ================= LOJA ================= -->
+<div id="lojaView">
+  <header class="topbar">
+    <div class="logo-circulo">🥟</div>
+    <div class="topbar-textos">
+      <h1 id="nomeLoja">Vovó Neide</h1>
+      <p id="taglineLoja">Salgados e doces artesanais, direto pro seu WhatsApp</p>
+    </div>
+    <div class="topbar-acoes">
+      <select id="seletorIdioma" onchange="mudarIdioma(this.value)">
+        <option value="pt">🇧🇷 PT</option>
+        <option value="en">🇺🇸 EN</option>
+        <option value="es">🇪🇸 ES</option>
+      </select>
+      <button class="icon-btn" title="Modo escuro" onclick="alternarTema()">🌗</button>
+      <button class="icon-btn" title="Favoritos" onclick="abrirFavoritos()">♥<span class="badge-mini" id="favCount">0</span></button>
+      <button class="icon-btn" title="Notificações de promoção" onclick="ativarNotificacoes()">🔔</button>
+      <button class="icon-btn" title="Acompanhar pedido" onclick="abrirRastreio()">📦</button>
+    </div>
+  </header>
+
+  <div style="text-align:center;">
+    <span class="badge-horario" id="badgeHorario">—</span>
+  </div>
+
+  <div class="banners-carrossel" id="bannersCarrossel"></div>
+  <div class="promo-countdown hidden" id="promoCountdownWrap">
+    <div class="promo-countdown-box" id="promoCountdownBox"></div>
+  </div>
+
+  <section class="hero">
+    <h2 data-i18n="hero_titulo">Fresquinho, do jeito que a vila gosta.</h2>
+    <p data-i18n="hero_texto">Escolha seus salgados e doces favoritos, monte o pedido e finalize direto no WhatsApp. Simples assim.</p>
+    <div class="busca-wrap">
+      <input type="text" id="buscaInput" data-i18n-placeholder="buscar_placeholder" placeholder="Buscar produto..." oninput="renderProdutos()">
+      <button id="btnFiltros" onclick="toggleFiltros()" data-i18n="filtros_btn">Filtros</button>
+    </div>
+    <div class="painel-filtros hidden" id="painelFiltros">
+      <label data-i18n="filtro_preco">Faixa de preço</label>
+      <div class="faixa-preco">
+        <span>R$ 0</span>
+        <input type="range" id="filtroPrecoMax" min="0" max="60" value="60" step="1" oninput="renderProdutos(); document.getElementById('filtroPrecoLabel').textContent='R$ '+this.value">
+        <span id="filtroPrecoLabel">R$ 60</span>
+      </div>
+      <label data-i18n="filtro_ingredientes">Ingredientes</label>
+      <div class="chips-filtro" id="chipsIngredientesFiltro"></div>
+      <label style="margin-top:10px;"><input type="checkbox" id="filtroSoFavoritos" style="width:auto;" onchange="renderProdutos()"> <span data-i18n="filtro_favoritos">Mostrar só favoritos</span></label>
+    </div>
+  </section>
+
+  <nav class="categorias-nav" id="categoriasNav"></nav>
+
+  <div class="secao-titulo hidden" id="secaoComboWrap"><h3 data-i18n="combo_dia">🔥 Combo do dia</h3></div>
+  <main class="carrossel-destaques hidden" id="comboGrid"></main>
+
+  <div class="secao-titulo"><h3 data-i18n="mais_vendidos">⭐ Mais vendidos</h3></div>
+  <main class="carrossel-destaques" id="maisVendidosGrid"></main>
+
+  <div class="secao-titulo"><h3 data-i18n="recem_chegados">🆕 Recém-adicionados</h3></div>
+  <main class="carrossel-destaques" id="recentesGrid"></main>
+
+  <div class="secao-titulo"><h3 data-i18n="cardapio_completo">Cardápio completo</h3></div>
+  <main class="produtos-grid" id="produtosGrid"></main>
+
+  <footer>
+    <h4 data-i18n="fala_com_gente">Fala com a gente</h4>
+    <div class="footer-links">
+      <a id="waGroupLinkTexto" href="#" target="_blank" rel="noopener" data-i18n="entrar_grupo">Entrar no grupo do WhatsApp</a>
+      <a id="igLinkTexto" href="#" target="_blank" rel="noopener" data-i18n="seguir_insta">Seguir no Instagram</a>
+    </div>
+    <div id="mapaLojaWrap" style="max-width:420px;margin:14px auto 0;border-radius:14px;overflow:hidden;"></div>
+    <div style="margin-top:14px;">
+      <button class="link-admin" onclick="abrirAdminLogin()" data-i18n="acesso_admin">Acesso administrativo</button>
+    </div>
+    <p class="footer-fine" data-i18n="chave_pix">Chave Pix para pagamento: <span id="pixKeyDisplay"></span></p>
+  </footer>
+</div>
+
+<div class="bubble-stack">
+  <a id="igBubble" class="bubble bubble-ig" href="#" target="_blank" rel="noopener" title="Instagram">
+    <svg viewBox="0 0 24 24"><path d="M12 2c2.7 0 3 .01 4.1.06 1.1.05 1.8.22 2.4.46.66.26 1.2.6 1.75 1.15.55.55.9 1.09 1.15 1.75.24.6.41 1.3.46 2.4.05 1.1.06 1.4.06 4.1s-.01 3-.06 4.1c-.05 1.1-.22 1.8-.46 2.4a4.9 4.9 0 0 1-1.15 1.75 4.9 4.9 0 0 1-1.75 1.15c-.6.24-1.3.41-2.4.46-1.1.05-1.4.06-4.1.06s-3-.01-4.1-.06c-1.1-.05-1.8-.22-2.4-.46a4.9 4.9 0 0 1-1.75-1.15 4.9 4.9 0 0 1-1.15-1.75c-.24-.6-.41-1.3-.46-2.4C2.01 15 2 14.7 2 12s.01-3 .06-4.1c.05-1.1.22-1.8.46-2.4.26-.66.6-1.2 1.15-1.75A4.9 4.9 0 0 1 5.42 2.6c.6-.24 1.3-.41 2.4-.46C8.92 2.01 9.3 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zm5.2-8.4a1.2 1.2 0 1 1 -2.4 0 1.2 1.2 0 0 1 2.4 0z"/></svg>
+  </a>
+  <a id="waGroupBubble" class="bubble bubble-wa" href="#" target="_blank" rel="noopener" title="WhatsApp">
+    <svg viewBox="0 0 24 24"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.42 1.26 4.86L2 22l5.34-1.28a9.9 9.9 0 0 0 4.7 1.19h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm0 18.1c-1.5 0-2.94-.4-4.2-1.16l-.3-.18-3.14.76.76-3.06-.2-.32a8.1 8.1 0 0 1-1.28-4.18c0-4.5 3.66-8.16 8.16-8.16 2.18 0 4.22.85 5.77 2.39a8.1 8.1 0 0 1 2.39 5.77c0 4.5-3.66 8.14-8.16 8.14zm4.48-6.1c-.24-.12-1.44-.71-1.66-.79-.22-.08-.38-.12-.55.12-.16.24-.63.79-.77.95-.14.16-.28.18-.52.06-.24-.12-1.02-.38-1.94-1.2-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.55-1.33-.76-1.82-.2-.48-.4-.42-.55-.42-.14 0-.3-.02-.46-.02s-.42.06-.64.3c-.22.24-.85.83-.85 2.02 0 1.19.87 2.34.99 2.5.12.16 1.71 2.61 4.14 3.66.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28z"/></svg>
+  </a>
+</div>
+
+<button id="fabCarrinho" onclick="abrirCarrinho()">🛒 <span id="cartCount">0</span></button>
+
+<!-- ================= MODAL FAVORITOS ================= -->
+<div id="favModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('favModal')">✕</button>
+    <h3 data-i18n="meus_favoritos">Meus favoritos</h3>
+    <div id="favLista"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL DETALHE DO PRODUTO ================= -->
+<div id="produtoModal" class="modal hidden">
+  <div class="modal-box largo">
+    <button class="modal-fechar" onclick="closeModal('produtoModal')">✕</button>
+    <div id="produtoDetalheConteudo"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL CARRINHO ================= -->
+<div id="cartModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('cartModal')">✕</button>
+    <h3 data-i18n="seu_carrinho">Seu carrinho</h3>
+    <div id="cartItems"></div>
+    <div id="brindeInfo"></div>
+    <div class="recibo-linha total" style="margin-top:10px;">
+      <span data-i18n="subtotal">Subtotal</span><span id="cartSubtotal">R$ 0,00</span>
+    </div>
+    <button class="btn-primario" id="btnIrCheckout" onclick="abrirCheckout()" disabled data-i18n="continuar_finalizar">Continuar para finalizar</button>
+  </div>
+</div>
+
+<!-- ================= MODAL CHECKOUT ================= -->
+<div id="checkoutModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('checkoutModal')">✕</button>
+    <h3 data-i18n="finalizar_pedido">Finalizar pedido</h3>
+    <div class="barra-passos">
+      <div class="passo ativo"><div class="bola">1</div>Dados</div>
+      <div class="passo"><div class="bola">2</div>Entrega</div>
+      <div class="passo"><div class="bola">3</div>Pagamento</div>
+      <div class="passo"><div class="bola">4</div>Resumo</div>
+    </div>
+
+    <label for="inputNome" data-i18n="seu_nome">Seu nome</label>
+    <input type="text" id="inputNome" placeholder="Nome completo">
+
+    <label for="inputTelefone" data-i18n="seu_whats">Seu WhatsApp</label>
+    <input type="tel" id="inputTelefone" placeholder="(11) 99999-9999" onchange="preencherPontosCliente()">
+    <p class="muted" id="pontosClienteInfo"></p>
+
+    <label for="inputAniversario">Data de aniversário (opcional, para cupom de aniversário)</label>
+    <input type="date" id="inputAniversario">
+
+    <label for="inputIndicacao">Código de indicação (opcional)</label>
+    <input type="text" id="inputIndicacao" placeholder="Ex: 5511999999999">
+
+    <label data-i18n="entrega_label">Entrega</label>
+    <div class="radio-linha"><input type="radio" name="tipoEntrega" value="retirada" id="tipoRetirada" checked onchange="onEntregaChange()"><label for="tipoRetirada" style="margin:0;font-weight:400;">Retirar no local (<span id="tempoRetiradaTxt">--</span>)</label></div>
+    <div class="radio-linha"><input type="radio" name="tipoEntrega" value="entrega" id="tipoEntregaR" onchange="onEntregaChange()"><label for="tipoEntregaR" style="margin:0;font-weight:400;">Receber em casa (<span id="tempoEntregaTxt">--</span>)</label></div>
+    <div id="enderecoWrap" class="hidden">
+      <label for="inputCep">CEP</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="inputCep" placeholder="00000-000" onblur="buscarCep()">
+      </div>
+      <label for="inputEndereco">Endereço (rua e número)</label>
+      <textarea id="inputEndereco" placeholder="Rua, número, referência"></textarea>
+      <label for="inputBairro">Bairro</label>
+      <select id="inputBairro" onchange="recalcResumo()"></select>
+    </div>
+
+    <label data-i18n="agendar_label">Agendamento</label>
+    <div class="checkbox-linha" style="margin-top:0;"><input type="checkbox" id="chkAgendar" onchange="onAgendarChange()"><label style="margin:0;" data-i18n="quero_agendar">Quero agendar este pedido para outro dia/horário</label></div>
+    <div id="agendamentoWrap" class="hidden">
+      <label for="inputDataAgenda">Data</label>
+      <input type="date" id="inputDataAgenda">
+      <label for="inputHoraAgenda">Horário</label>
+      <input type="time" id="inputHoraAgenda">
+    </div>
+
+    <label data-i18n="pagamento_label">Forma de pagamento</label>
+    <div class="radio-linha"><input type="radio" name="pagamento" value="pix" id="pagPix" checked onchange="onPagamentoChange()"><label for="pagPix" style="margin:0;font-weight:400;">Pix</label></div>
+    <div class="radio-linha"><input type="radio" name="pagamento" value="dinheiro" id="pagDinheiro" onchange="onPagamentoChange()"><label for="pagDinheiro" style="margin:0;font-weight:400;">Dinheiro</label></div>
+    <div class="radio-linha"><input type="radio" name="pagamento" value="credito" id="pagCredito" onchange="onPagamentoChange()"><label for="pagCredito" style="margin:0;font-weight:400;">Cartão de Crédito</label></div>
+    <div class="radio-linha"><input type="radio" name="pagamento" value="debito" id="pagDebito" onchange="onPagamentoChange()"><label for="pagDebito" style="margin:0;font-weight:400;">Cartão de Débito</label></div>
+    <div id="pixInfo" class="pix-info">Chave Pix: <strong id="pixInfoChave"></strong></div>
+
+    <label for="inputObs">Observações</label>
+    <textarea id="inputObs" placeholder="Ex: sem cebola, troco para R$ 50..."></textarea>
+
+    <label data-i18n="cupom_label">Cupom de desconto</label>
+    <div class="cupom-linha">
+      <input type="text" id="cupomInput" placeholder="Digite o código">
+      <button onclick="applyCoupon()" data-i18n="aplicar">Aplicar</button>
+    </div>
+    <div class="cupom-ok hidden" id="cupomAplicado"></div>
+
+    <div class="checkbox-linha" id="pontosResgateWrap" style="display:none;">
+      <input type="checkbox" id="chkUsarPontos" onchange="recalcResumo()">
+      <label style="margin:0;" id="pontosResgateLabel">Usar meus pontos de fidelidade</label>
+    </div>
+
+    <div class="recibo" style="margin-top:16px;">
+      <div class="recibo-linha"><span data-i18n="subtotal">Subtotal</span><span id="resSubtotal">R$ 0,00</span></div>
+      <div class="recibo-linha hidden" id="linhaDesconto"><span data-i18n="desconto_cupom">Desconto (cupom)</span><span id="resDesconto">-R$ 0,00</span></div>
+      <div class="recibo-linha hidden" id="linhaDescontoAuto"><span id="labelDescontoAuto">Desconto (compra acima de R$60)</span><span id="resDescontoAuto">-R$ 0,00</span></div>
+      <div class="recibo-linha hidden" id="linhaPontos"><span data-i18n="desconto_pontos">Desconto (pontos)</span><span id="resDescontoPontos">-R$ 0,00</span></div>
+      <div class="recibo-linha hidden" id="linhaEntrega"><span data-i18n="taxa_entrega">Taxa de entrega</span><span id="resEntrega">R$ 0,00</span></div>
+      <div class="recibo-linha hidden" id="linhaTaxaCartao"><span data-i18n="taxa_cartao">Taxa do cartão</span><span id="resTaxaCartao">R$ 0,00</span></div>
+      <div class="recibo-linha total"><span data-i18n="total">Total</span><span id="resTotal">R$ 0,00</span></div>
+    </div>
+
+    <button class="btn-primario" onclick="finalizeOrder()" data-i18n="enviar_pedido">Enviar pedido pelo WhatsApp</button>
+  </div>
+</div>
+
+<!-- ================= MODAL PEDIDO CONFIRMADO ================= -->
+<div id="confirmadoModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('confirmadoModal')">✕</button>
+    <h3>🎉 Pedido enviado!</h3>
+    <p class="muted">Guarde seu código de acompanhamento: <strong id="codigoPedidoConfirmado"></strong></p>
+    <p class="muted" id="pontosGanhosTexto"></p>
+    <button class="btn-primario" onclick="baixarReciboPdf(window.__ultimoPedidoId)">⬇️ Baixar recibo em PDF</button>
+    <button class="btn-secundario" style="margin-top:8px;" onclick="closeModal('confirmadoModal')">Fechar</button>
+  </div>
+</div>
+
+<!-- ================= MODAL RASTREIO ================= -->
+<div id="rastreioModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('rastreioModal')">✕</button>
+    <h3 data-i18n="acompanhar_pedido">Acompanhar pedido</h3>
+    <label for="rastreioTelefone">Seu telefone (WhatsApp usado no pedido)</label>
+    <input type="tel" id="rastreioTelefone" placeholder="(11) 99999-9999">
+    <button class="btn-primario" onclick="buscarPedidosCliente()">Buscar meus pedidos</button>
+    <div id="rastreioResultado" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL LOGIN ADMIN ================= -->
+<div id="adminLoginModal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-fechar" onclick="closeModal('adminLoginModal')">✕</button>
+    <h3>Acesso administrativo</h3>
+    <label for="adminUsuarioInput">Usuário</label>
+    <input type="text" id="adminUsuarioInput" placeholder="admin">
+    <label for="adminSenhaInput">Senha</label>
+    <input type="password" id="adminSenhaInput" placeholder="Senha">
+    <button class="btn-primario" onclick="tentarLoginAdmin()">Entrar</button>
+  </div>
+</div>
+
+<!-- ================= ADMIN VIEW ================= -->
+<div id="adminView" class="hidden">
+  <div class="admin-header">
+    <h2>Painel administrativo</h2>
+    <div>
+      <span class="muted" id="adminUsuarioLogado"></span>
+      <button class="btn-secundario" style="width:auto;display:inline-block;padding:8px 16px;" onclick="sairAdmin()">Sair</button>
+    </div>
+  </div>
+  <div class="admin-tabs" id="adminTabsWrap">
+    <button class="admin-tab-btn ativo" id="tabbtn-dashboard" onclick="mostrarAbaAdmin('dashboard')">Dashboard</button>
+    <button class="admin-tab-btn" id="tabbtn-produtos" onclick="mostrarAbaAdmin('produtos')">Produtos</button>
+    <button class="admin-tab-btn" id="tabbtn-pedidos" onclick="mostrarAbaAdmin('pedidos')">Pedidos</button>
+    <button class="admin-tab-btn" id="tabbtn-cupons" onclick="mostrarAbaAdmin('cupons')">Cupons</button>
+    <button class="admin-tab-btn" id="tabbtn-marketing" onclick="mostrarAbaAdmin('marketing')">Marketing</button>
+    <button class="admin-tab-btn" id="tabbtn-entrega" onclick="mostrarAbaAdmin('entrega')">Entrega</button>
+    <button class="admin-tab-btn" id="tabbtn-clientes" onclick="mostrarAbaAdmin('clientes')">Clientes</button>
+    <button class="admin-tab-btn" id="tabbtn-funcionarios" onclick="mostrarAbaAdmin('funcionarios')">Funcionários</button>
+    <button class="admin-tab-btn" id="tabbtn-historico" onclick="mostrarAbaAdmin('historico')">Histórico</button>
+    <button class="admin-tab-btn" id="tabbtn-config" onclick="mostrarAbaAdmin('config')">Configurações</button>
+    <button class="admin-tab-btn" id="tabbtn-dados" onclick="mostrarAbaAdmin('dados')">Backup</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="aba-dashboard" class="admin-aba">
+    <div class="dash-grid" id="dashKpis"></div>
+    <div class="admin-card"><h3>Faturamento diário (últimos 14 dias)</h3><div class="grafico-wrap"><canvas id="chartDiario"></canvas></div></div>
+    <div class="admin-card"><h3>Faturamento semanal (últimas 8 semanas)</h3><div class="grafico-wrap"><canvas id="chartSemanal"></canvas></div></div>
+    <div class="admin-card"><h3>Faturamento mensal (últimos 12 meses)</h3><div class="grafico-wrap"><canvas id="chartMensal"></canvas></div></div>
+    <div class="admin-card"><h3>Agenda de encomendas</h3><div id="agendaEncomendas"></div></div>
+  </div>
+
+  <!-- PRODUTOS -->
+  <div id="aba-produtos" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3 id="tituloFormProduto">Novo produto</h3>
+      <div class="form-grid">
+        <div><label>Nome</label><input type="text" id="prodNome"></div>
+        <div><label>Categoria</label><input type="text" id="prodCategoria" placeholder="Salgados"></div>
+        <div><label>Preço base (R$)</label><input type="number" step="0.01" id="prodPreco"></div>
+        <div><label>Peso (g)</label><input type="number" id="prodPeso"></div>
+        <div><label>Estoque (unidades)</label><input type="number" id="prodEstoque"></div>
+        <div><label>Ícone (emoji, usado se não houver foto)</label><input type="text" id="prodIcone" placeholder="🍽️"></div>
+        <div class="full">
+          <label>Foto do produto</label>
+          <input type="text" id="prodFoto" placeholder="Cole a URL de uma foto (opcional)">
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+            <button type="button" class="btn-secundario" onclick="document.getElementById('prodFotoArquivo').click()">📷 Tirar foto / escolher do celular</button>
+            <img id="prodFotoPreview" src="" alt="" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);">
+          </div>
+          <input type="file" id="prodFotoArquivo" accept="image/*" capture="environment" class="hidden" onchange="carregarFotoDoDispositivo(event)">
+          <p class="muted">Envie direto do celular (câmera ou galeria) ou cole um link acima.</p>
+        </div>
+        <div class="full"><label>Descrição</label><textarea id="prodDescricao"></textarea></div>
+        <div class="full">
+          <label>Ingredientes (separados por vírgula)</label>
+          <input type="text" id="prodIngredientes" placeholder="Frango, farinha de trigo, cebola, temperos">
+        </div>
+        <div class="full">
+          <label>Alergênicos (separados por vírgula)</label>
+          <input type="text" id="prodAlergenicos" placeholder="Glúten, Leite, Ovo">
+        </div>
+        <div><label>Calorias (kcal)</label><input type="number" id="prodCalorias"></div>
+        <div><label>Proteínas (g)</label><input type="number" id="prodProteinas"></div>
+        <div><label>Carboidratos (g)</label><input type="number" id="prodCarboidratos"></div>
+        <div><label>Gorduras (g)</label><input type="number" id="prodGorduras"></div>
+        <div class="full">
+          <label>Tamanhos (formato: Nome:acréscimo, separados por vírgula) — ex: Pequeno:0, Grande:3.5</label>
+          <input type="text" id="prodTamanhos" placeholder="Único:0">
+        </div>
+        <div class="full">
+          <label>Adicionais (formato: Nome:preço, separados por vírgula) — ex: Catupiry:2, Bacon:3</label>
+          <input type="text" id="prodAdicionais" placeholder="">
+        </div>
+      </div>
+      <div class="checkbox-linha"><input type="checkbox" id="prodDestaque"><label style="margin:0;">Produto em destaque</label></div>
+      <div class="checkbox-linha"><input type="checkbox" id="prodDisponivel" checked><label style="margin:0;">Disponível para venda</label></div>
+      <button class="btn-primario" onclick="salvarProduto()">Salvar produto</button>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="novoProdutoForm()">Limpar / Novo produto</button>
+    </div>
+    <div class="admin-card">
+      <h3>Importar / exportar produtos (Excel)</h3>
+      <p class="muted">Colunas aceitas na importação: nome, categoria, preco, descricao, estoque, peso, icone, foto</p>
+      <button class="btn-secundario" onclick="exportarProdutosExcel()">⬇️ Exportar produtos (.xlsx)</button>
+      <label style="margin-top:12px;">Importar planilha de produtos</label>
+      <input type="file" accept=".xlsx,.xls,.csv" onchange="importarProdutosExcel(event)">
+    </div>
+    <div class="admin-card">
+      <h3>Produtos cadastrados</h3>
+      <div id="listaProdutosAdmin"></div>
+    </div>
+  </div>
+
+  <!-- PEDIDOS -->
+  <div id="aba-pedidos" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Histórico de pedidos</h3>
+      <button class="btn-secundario" onclick="exportarPedidosExcel()" style="margin-bottom:10px;">⬇️ Exportar pedidos (.xlsx)</button>
+      <div id="listaPedidosAdmin"></div>
+    </div>
+  </div>
+
+  <!-- CUPONS -->
+  <div id="aba-cupons" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3 id="tituloFormCupom">Novo cupom</h3>
+      <div class="form-grid">
+        <div><label>Código</label><input type="text" id="cupCodigo" placeholder="Ex: BEMVINDO10"></div>
+        <div><label>Desconto (%)</label><input type="number" step="0.01" id="cupValor"></div>
+        <div><label>Validade</label><input type="date" id="cupValidade"></div>
+        <div><label>Tipo</label>
+          <select id="cupTipo">
+            <option value="manual">Manual</option>
+            <option value="aniversario">Aniversário</option>
+            <option value="indicacao">Indicação de amigos</option>
+          </select>
+        </div>
+      </div>
+      <div class="checkbox-linha"><input type="checkbox" id="cupAtivo" checked><label style="margin:0;">Cupom ativo</label></div>
+      <button class="btn-primario" onclick="salvarCupom()">Salvar cupom</button>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="novoCupomForm()">Limpar / Novo cupom</button>
+    </div>
+    <div class="admin-card">
+      <h3>Gerar cupons de aniversário do mês</h3>
+      <p class="muted">Cria automaticamente um cupom para cada cliente que fez aniversário este mês (com base na data informada no checkout).</p>
+      <button class="btn-primario" onclick="gerarCuponsAniversario()">Gerar cupons de aniversariantes</button>
+    </div>
+    <div class="admin-card">
+      <h3>Cupons cadastrados</h3>
+      <div id="listaCuponsAdmin"></div>
+    </div>
+  </div>
+
+  <!-- MARKETING -->
+  <div id="aba-marketing" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Banners promocionais (carrossel no topo)</h3>
+      <div class="tag-input-wrap"><input type="text" id="novoBannerTexto" placeholder="Ex: Frete grátis acima de R$60!"><button onclick="adicionarBanner()">Adicionar</button></div>
+      <div id="listaBanners" style="margin-top:10px;"></div>
+    </div>
+    <div class="admin-card">
+      <h3>Combo do dia</h3>
+      <div class="checkbox-linha" style="margin-top:0;"><input type="checkbox" id="comboAtivo"><label style="margin:0;">Combo ativo</label></div>
+      <label>Nome do combo</label><input type="text" id="comboNome" placeholder="Combo Tarde de Sábado">
+      <label>Desconto (%)</label><input type="number" id="comboDesconto">
+      <label>IDs dos produtos (separados por vírgula — veja o ID na lista de produtos)</label>
+      <input type="text" id="comboProdutos" placeholder="p1,p5">
+      <button class="btn-primario" onclick="salvarCombo()">Salvar combo do dia</button>
+    </div>
+    <div class="admin-card">
+      <h3>Contagem regressiva de promoção</h3>
+      <label>Texto da promoção</label><input type="text" id="promoTexto" placeholder="Só hoje: 15% OFF">
+      <label>Termina em</label><input type="datetime-local" id="promoFimInput">
+      <button class="btn-primario" onclick="salvarPromoCountdown()">Salvar contagem regressiva</button>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="limparPromoCountdown()">Remover contagem regressiva</button>
+    </div>
+    <div class="admin-card">
+      <h3>Pop-up de desconto (primeira visita)</h3>
+      <div class="checkbox-linha" style="margin-top:0;"><input type="checkbox" id="popupAtivo"><label style="margin:0;">Ativo</label></div>
+      <label>Código do cupom mostrado</label><input type="text" id="popupCodigo">
+      <label>Segundos até aparecer</label><input type="number" id="popupAtraso" value="8">
+      <button class="btn-primario" onclick="salvarPopupConfig()">Salvar pop-up</button>
+    </div>
+    <div class="admin-card">
+      <h3>Indicação de amigos</h3>
+      <label>Desconto para quem foi indicado (%)</label>
+      <input type="number" id="indicacaoDesconto">
+      <button class="btn-primario" onclick="salvarIndicacaoConfig()">Salvar</button>
+      <p class="muted">Cada cliente pode compartilhar o próprio telefone como "código de indicação" com amigos.</p>
+    </div>
+  </div>
+
+  <!-- ENTREGA -->
+  <div id="aba-entrega" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Endereço da loja (para o mapa)</h3>
+      <input type="text" id="cfgEnderecoLoja" placeholder="Rua Exemplo, 123 - Bairro - Cidade/UF">
+      <button class="btn-primario" onclick="salvarEnderecoLoja()">Salvar endereço e atualizar mapa</button>
+    </div>
+    <div class="admin-card">
+      <h3>Tempo estimado</h3>
+      <div class="form-grid">
+        <div><label>Retirada — mínimo (min)</label><input type="number" id="cfgTempoRetiradaMin"></div>
+        <div><label>Retirada — máximo (min)</label><input type="number" id="cfgTempoRetiradaMax"></div>
+        <div><label>Entrega — mínimo (min)</label><input type="number" id="cfgTempoEntregaMin"></div>
+        <div><label>Entrega — máximo (min)</label><input type="number" id="cfgTempoEntregaMax"></div>
+      </div>
+      <button class="btn-primario" onclick="salvarTemposConfig()">Salvar tempos</button>
+    </div>
+    <div class="admin-card">
+      <h3>Taxa de entrega por bairro</h3>
+      <div class="form-grid">
+        <div><label>Bairro</label><input type="text" id="bairroNome"></div>
+        <div><label>Taxa (R$)</label><input type="number" step="0.01" id="bairroTaxa"></div>
+        <div class="full"><label>Frete grátis a partir de (R$, 0 = desativado)</label><input type="number" step="0.01" id="bairroFreteGratis"></div>
+      </div>
+      <button class="btn-primario" onclick="adicionarBairro()">Adicionar / atualizar bairro</button>
+      <div id="listaBairros" style="margin-top:10px;"></div>
+    </div>
+    <div class="admin-card">
+      <h3>Horário de funcionamento</h3>
+      <div id="gradeHorarios"></div>
+      <button class="btn-primario" onclick="salvarHorarios()">Salvar horários</button>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div id="aba-clientes" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Clientes e o que costumam pedir</h3>
+      <p class="muted">Essa lista é montada automaticamente a cada pedido finalizado. Mostra também pontos de fidelidade.</p>
+      <div id="listaClientesAdmin"></div>
+    </div>
+  </div>
+
+  <!-- FUNCIONÁRIOS -->
+  <div id="aba-funcionarios" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3 id="tituloFormFuncionario">Novo funcionário</h3>
+      <div class="form-grid">
+        <div><label>Nome</label><input type="text" id="funcNome"></div>
+        <div><label>Usuário</label><input type="text" id="funcUsuario"></div>
+        <div><label>Senha</label><input type="password" id="funcSenha"></div>
+        <div><label>Nível de acesso</label>
+          <select id="funcNivel">
+            <option value="administrador">Administrador (acesso total)</option>
+            <option value="gerente">Gerente (sem funcionários/configurações)</option>
+            <option value="atendente">Atendente (só pedidos e clientes)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primario" onclick="salvarFuncionario()">Salvar funcionário</button>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="novoFuncionarioForm()">Limpar / Novo</button>
+    </div>
+    <div class="admin-card">
+      <h3>Funcionários cadastrados</h3>
+      <div id="listaFuncionariosAdmin"></div>
+    </div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div id="aba-historico" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Histórico de alterações</h3>
+      <div id="listaHistorico"></div>
+    </div>
+  </div>
+
+  <!-- CONFIGURAÇÕES -->
+  <div id="aba-config" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Loja</h3>
+      <div class="form-grid">
+        <div class="full"><label>Nome da loja</label><input type="text" id="cfgNome"></div>
+        <div class="full"><label>Frase de efeito (tagline)</label><input type="text" id="cfgTagline"></div>
+      </div>
+    </div>
+    <div class="admin-card">
+      <h3>Contato e redes</h3>
+      <div class="form-grid">
+        <div><label>WhatsApp para pedidos (só números, com DDI)</label><input type="text" id="cfgWhats" placeholder="5511999999999"></div>
+        <div><label>Link do grupo do WhatsApp</label><input type="text" id="cfgWhatsGrupo"></div>
+        <div><label>Link do Instagram</label><input type="text" id="cfgInsta"></div>
+        <div><label>Chave Pix</label><input type="text" id="cfgPix"></div>
+      </div>
+    </div>
+    <div class="admin-card">
+      <h3>Taxas, entrega padrão e cartão</h3>
+      <div class="form-grid">
+        <div><label>Taxa de entrega padrão (R$)</label><input type="number" step="0.01" id="cfgEntrega"></div>
+        <div><label>Entrega grátis a partir de (R$, 0 = desativado)</label><input type="number" step="0.01" id="cfgEntregaGratis"></div>
+        <div><label>Taxa cartão de crédito (%)</label><input type="number" step="0.01" id="cfgTaxaCredito"></div>
+        <div><label>Taxa cartão de débito (%)</label><input type="number" step="0.01" id="cfgTaxaDebito"></div>
+      </div>
+    </div>
+    <div class="admin-card">
+      <h3>Programa de fidelidade</h3>
+      <div class="form-grid">
+        <div><label>Pontos ganhos por R$1 gasto</label><input type="number" step="0.1" id="cfgPontosPorReal"></div>
+        <div><label>Pontos necessários para resgatar</label><input type="number" id="cfgPontosParaResgate"></div>
+        <div class="full"><label>Valor do desconto ao resgatar (R$)</label><input type="number" step="0.01" id="cfgValorResgate"></div>
+      </div>
+    </div>
+    <div class="admin-card">
+      <h3>Brindes automáticos por valor de compra</h3>
+      <div class="form-grid">
+        <div><label>Valor mínimo (R$)</label><input type="number" step="0.01" id="brindeValor"></div>
+        <div><label>Nome do brinde</label><input type="text" id="brindeNome"></div>
+      </div>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="adicionarBrinde()">Adicionar brinde</button>
+      <div id="listaBrindes" style="margin-top:10px;"></div>
+    </div>
+    <div class="admin-card">
+      <h3>Segurança</h3>
+      <div class="form-grid">
+        <div class="full"><label>Senha mestra do painel administrativo</label><input type="text" id="cfgSenha"></div>
+      </div>
+    </div>
+    <button class="btn-primario" onclick="salvarConfig()">Salvar configurações</button>
+  </div>
+
+  <!-- BACKUP -->
+  <div id="aba-dados" class="admin-aba hidden">
+    <div class="admin-card">
+      <h3>Armazenamento dos dados</h3>
+      <p class="muted" id="statusNuvemTexto">Os dados ficam salvos automaticamente neste aparelho. Para sincronizar tudo (produtos, pedidos, cupons e clientes) entre vários celulares/computadores pela nuvem, configure o Firebase — veja o comentário "FIREBASE" no início do código-fonte do site. Enquanto isso, faça backups periódicos abaixo.</p>
+      <p class="muted" id="statusNuvemBadge"></p>
+      <button class="btn-primario" onclick="baixarBackup()">Baixar backup (.json)</button>
+      <label style="margin-top:18px;">Importar backup</label>
+      <input type="file" accept=".json" onchange="importarBackup(event)">
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==================== I18N ==================== */
+const i18n = {
+  pt: {
+    hero_titulo:"Fresquinho, do jeito que a vila gosta.",
+    hero_texto:"Escolha seus salgados e doces favoritos, monte o pedido e finalize direto no WhatsApp. Simples assim.",
+    buscar_placeholder:"Buscar produto...", filtros_btn:"Filtros", filtro_preco:"Faixa de preço",
+    filtro_ingredientes:"Ingredientes", filtro_favoritos:"Mostrar só favoritos",
+    combo_dia:"🔥 Combo do dia", mais_vendidos:"⭐ Mais vendidos", recem_chegados:"🆕 Recém-adicionados",
+    cardapio_completo:"Cardápio completo", fala_com_gente:"Fala com a gente", entrar_grupo:"Entrar no grupo do WhatsApp",
+    seguir_insta:"Seguir no Instagram", acesso_admin:"Acesso administrativo", chave_pix:"Chave Pix para pagamento: ",
+    meus_favoritos:"Meus favoritos", seu_carrinho:"Seu carrinho", subtotal:"Subtotal", continuar_finalizar:"Continuar para finalizar",
+    finalizar_pedido:"Finalizar pedido", seu_nome:"Seu nome", seu_whats:"Seu WhatsApp", entrega_label:"Entrega",
+    agendar_label:"Agendamento", quero_agendar:"Quero agendar este pedido para outro dia/horário", pagamento_label:"Forma de pagamento",
+    cupom_label:"Cupom de desconto", aplicar:"Aplicar", desconto_cupom:"Desconto (cupom)", desconto_pontos:"Desconto (pontos)",
+    taxa_entrega:"Taxa de entrega", taxa_cartao:"Taxa do cartão", total:"Total", enviar_pedido:"Enviar pedido pelo WhatsApp",
+    acompanhar_pedido:"Acompanhar pedido", popup_ok:"Aproveitar"
+  },
+  en:{
+    hero_titulo:"Fresh, just the way the village likes it.",
+    hero_texto:"Pick your favorite snacks and sweets, build your order and check out straight on WhatsApp. That simple.",
+    buscar_placeholder:"Search product...", filtros_btn:"Filters", filtro_preco:"Price range",
+    filtro_ingredientes:"Ingredients", filtro_favoritos:"Show favorites only",
+    combo_dia:"🔥 Combo of the day", mais_vendidos:"⭐ Best sellers", recem_chegados:"🆕 Newly added",
+    cardapio_completo:"Full menu", fala_com_gente:"Talk to us", entrar_grupo:"Join our WhatsApp group",
+    seguir_insta:"Follow on Instagram", acesso_admin:"Admin access", chave_pix:"Pix key for payment: ",
+    meus_favoritos:"My favorites", seu_carrinho:"Your cart", subtotal:"Subtotal", continuar_finalizar:"Continue to checkout",
+    finalizar_pedido:"Checkout", seu_nome:"Your name", seu_whats:"Your WhatsApp", entrega_label:"Delivery",
+    agendar_label:"Scheduling", quero_agendar:"I want to schedule this order for another day/time", pagamento_label:"Payment method",
+    cupom_label:"Discount coupon", aplicar:"Apply", desconto_cupom:"Discount (coupon)", desconto_pontos:"Discount (points)",
+    taxa_entrega:"Delivery fee", taxa_cartao:"Card fee", total:"Total", enviar_pedido:"Send order via WhatsApp",
+    acompanhar_pedido:"Track order", popup_ok:"Grab it"
+  },
+  es:{
+    hero_titulo:"Fresquito, como le gusta al pueblo.",
+    hero_texto:"Elige tus salados y dulces favoritos, arma tu pedido y finaliza directo por WhatsApp. Así de simple.",
+    buscar_placeholder:"Buscar producto...", filtros_btn:"Filtros", filtro_preco:"Rango de precio",
+    filtro_ingredientes:"Ingredientes", filtro_favoritos:"Mostrar solo favoritos",
+    combo_dia:"🔥 Combo del día", mais_vendidos:"⭐ Más vendidos", recem_chegados:"🆕 Recién agregados",
+    cardapio_completo:"Menú completo", fala_com_gente:"Habla con nosotros", entrar_grupo:"Unirse al grupo de WhatsApp",
+    seguir_insta:"Seguir en Instagram", acesso_admin:"Acceso administrativo", chave_pix:"Clave Pix para el pago: ",
+    meus_favoritos:"Mis favoritos", seu_carrinho:"Tu carrito", subtotal:"Subtotal", continuar_finalizar:"Continuar",
+    finalizar_pedido:"Finalizar pedido", seu_nome:"Tu nombre", seu_whats:"Tu WhatsApp", entrega_label:"Entrega",
+    agendar_label:"Programación", quero_agendar:"Quiero programar este pedido para otro día/hora", pagamento_label:"Forma de pago",
+    cupom_label:"Cupón de descuento", aplicar:"Aplicar", desconto_cupom:"Descuento (cupón)", desconto_pontos:"Descuento (puntos)",
+    taxa_entrega:"Costo de envío", taxa_cartao:"Comisión de tarjeta", total:"Total", enviar_pedido:"Enviar pedido por WhatsApp",
+    acompanhar_pedido:"Rastrear pedido", popup_ok:"Aprovechar"
+  }
+};
+let idiomaAtual = localStorage.getItem("loja_idioma") || "pt";
+function mudarIdioma(v){
+  idiomaAtual = v;
+  localStorage.setItem("loja_idioma", v);
+  aplicarIdioma();
+}
+function aplicarIdioma(){
+  document.getElementById("seletorIdioma").value = idiomaAtual;
+  const dic = i18n[idiomaAtual] || i18n.pt;
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    const k = el.getAttribute("data-i18n");
+    if(dic[k]) el.textContent = dic[k];
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+    const k = el.getAttribute("data-i18n-placeholder");
+    if(dic[k]) el.placeholder = dic[k];
+  });
+}
+
+/* ==================== TEMA ==================== */
+function alternarTema(){
+  const atual = document.documentElement.getAttribute("data-tema") === "escuro" ? "claro" : "escuro";
+  document.documentElement.setAttribute("data-tema", atual);
+  localStorage.setItem("loja_tema", atual);
+}
+(function initTema(){
+  const salvo = localStorage.getItem("loja_tema");
+  if(salvo === "escuro") document.documentElement.setAttribute("data-tema","escuro");
+})();
+
+/* ==================== FOTOS PADRÃO POR CATEGORIA (fallback) ==================== */
+const fotosPadraoCategoria = {
+  "Salgados":"https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80",
+  "Doces":"https://images.unsplash.com/photo-1587668178277-295251f900ce?w=400&q=80",
+  "Bebidas":"https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&q=80"
+};
+
+/* ==================== DADOS ==================== */
+const stateInicial = {
+  config: {
+    storeName: "Doces e Salgados da Vovó Neide",
+    tagline: "Feitos com amor e sabor de vó! 💛",
+    whatsappNumber: "5516997161570",
+    whatsappGroupLink: "https://chat.whatsapp.com/K6A9ZbDh6Qw7Mxh4Sy6cqx?s=cl&p=a&ilr=4",
+    instagramLink: "https://instagram.com/docesesalgadosdavovo.oficial",
+    pixKey: "54767772885",
+    deliveryFee: 6.00,
+    freeDeliveryMin: 60.00,
+    creditFeePercent: 4.0,
+    debitFeePercent: 2.0,
+    adminPassword: "admin123",
+    enderecoLoja: "Avenida Manoel Machado, 1336 - Park Aliança",
+    descontoAcimaDe: {ativo:true, valorMinimo:60, percentual:10},
+    tempoRetirada: {min:15, max:25},
+    tempoEntrega: {min:35, max:55},
+    pontosPorReal: 1,
+    pontosParaResgate: 100,
+    valorResgate: 15,
+    indicacaoDesconto: 10,
+    horarios: {
+      0:{aberto:true, ini:"18:00", fim:"22:00"}, 1:{aberto:false, ini:"18:00", fim:"22:00"},
+      2:{aberto:true, ini:"18:00", fim:"22:00"}, 3:{aberto:true, ini:"18:00", fim:"22:00"},
+      4:{aberto:true, ini:"18:00", fim:"22:00"}, 5:{aberto:true, ini:"18:00", fim:"23:00"},
+      6:{aberto:true, ini:"12:00", fim:"23:00"}
+    },
+    banners: ["🎉 10% de desconto em compras acima de R$ 60!", "Novidade: Bolo de Pote Ninho com Nutella 🍫"],
+    combo: {ativo:false, nome:"", desconto:0, produtos:[]},
+    promoTexto:"", promoFim:null,
+    popup: {ativo:false, codigo:"BEMVINDO10", atraso:8},
+    brindes: [{valorMinimo:50, nome:"Refrigerante Lata grátis"}],
+    bairros: [
+      {nome:"Centro", taxa:5, freteGratis:60},
+      {nome:"Bela Vista", taxa:6, freteGratis:60},
+      {nome:"Vila Nova", taxa:8, freteGratis:0}
+    ]
+  },
+  products: [
+    {id:"p1", nome:"Coxinha de Frango", categoria:"Salgados", preco:8.00, descricao:"Massa cremosa com recheio de frango desfiado.", icone:"🍗", foto:"", destaque:true, disponivel:true, estoque:40, peso:90,
+      ingredientes:["Frango","Farinha de trigo","Cebola","Temperos"], alergenicos:["Glúten"], nutricional:{calorias:220,proteinas:9,carboidratos:22,gorduras:10},
+      tamanhos:[{nome:"Única",delta:0}], adicionais:[{nome:"Catupiry",preco:2}], criadoEm:"2026-06-01"},
+    {id:"p2", nome:"Risole de Carne", categoria:"Salgados", preco:7.50, descricao:"Recheio suculento de carne moída temperada.", icone:"🥟", foto:"", destaque:false, disponivel:true, estoque:35, peso:85,
+      ingredientes:["Carne moída","Farinha de trigo","Temperos"], alergenicos:["Glúten"], nutricional:{calorias:210,proteinas:8,carboidratos:20,gorduras:11},
+      tamanhos:[{nome:"Única",delta:0}], adicionais:[], criadoEm:"2026-06-01"},
+    {id:"p3", nome:"Pastel de Queijo", categoria:"Salgados", preco:7.00, descricao:"Crocante por fora, queijo derretido por dentro.", icone:"🧀", foto:"", destaque:false, disponivel:true, estoque:30, peso:80,
+      ingredientes:["Queijo muçarela","Massa de pastel"], alergenicos:["Glúten","Leite"], nutricional:{calorias:230,proteinas:10,carboidratos:18,gorduras:13},
+      tamanhos:[{nome:"Única",delta:0}], adicionais:[], criadoEm:"2026-06-02"},
+    {id:"p4", nome:"Kibe", categoria:"Salgados", preco:6.50, descricao:"Trigo e carne temperados, fritinho na hora.", icone:"🧆", foto:"", destaque:false, disponivel:true, estoque:25, peso:75,
+      ingredientes:["Trigo para kibe","Carne moída","Hortelã"], alergenicos:["Glúten"], nutricional:{calorias:190,proteinas:8,carboidratos:16,gorduras:9},
+      tamanhos:[{nome:"Única",delta:0}], adicionais:[], criadoEm:"2026-06-05"},
+    {id:"p5", nome:"Brigadeiro Gourmet", categoria:"Doces", preco:5.00, descricao:"Chocolate belga com granulado crocante.", icone:"🍫", foto:"", destaque:true, disponivel:true, estoque:60, peso:25,
+      ingredientes:["Chocolate","Leite condensado","Manteiga"], alergenicos:["Leite"], nutricional:{calorias:90,proteinas:1,carboidratos:12,gorduras:4},
+      tamanhos:[{nome:"Única",delta:0}], adicionais:[], criadoEm:"2026-05-20"},
+    {id:"p6", nome:"Beijinho", categoria:"Doces", preco:4.50, descricao:"Coco fresco ralado na medida certa.", icone:"🥥", foto:"", destaque:false, disponivel:true, estoque:50, peso:22,
+      ingredientes:["Coco ralado","Leite condensado"], alergenicos:["Leite"], nutricional:{calorias:85,proteinas:1,carboidratos:11,gorduras:4},
+      tamanhos:[{nome:"Única",delta:0}], adicionais:[], criadoEm:"2026-05-22"},
+    {id:"p7", nome:"Bolo de Pote Ninho c/ Nutella", categoria:"Doces", preco:12.00, descricao:"Camadas de bolo, ninho e nutella no pote.", icone:"🍰", foto:"", destaque:false, disponivel:true, estoque:20, peso:180,
+      ingredientes:["Bolo","Leite Ninho","Nutella"], alergenicos:["Glúten","Leite","Avelã"], nutricional:{calorias:380,proteinas:6,carboidratos:44,gorduras:19},
+      tamanhos:[{nome:"Único",delta:0}], adicionais:[], criadoEm:"2026-06-28"},
+    {id:"p8", nome:"Brownie", categoria:"Doces", preco:8.00, descricao:"Chocolate intenso, casquinha crocante.", icone:"🍫", foto:"", destaque:false, disponivel:true, estoque:0, peso:70,
+      ingredientes:["Chocolate","Manteiga","Farinha de trigo","Ovos"], alergenicos:["Glúten","Leite","Ovo"], nutricional:{calorias:290,proteinas:4,carboidratos:33,gorduras:16},
+      tamanhos:[{nome:"Único",delta:0}], adicionais:[], criadoEm:"2026-06-10"},
+    {id:"p9", nome:"Refrigerante Lata", categoria:"Bebidas", preco:6.00, descricao:"Gelado, 350ml.", icone:"🥤", foto:"", destaque:false, disponivel:true, estoque:80, peso:350,
+      ingredientes:["Água gaseificada","Xarope"], alergenicos:[], nutricional:{calorias:140,proteinas:0,carboidratos:36,gorduras:0},
+      tamanhos:[{nome:"Lata 350ml",delta:0}], adicionais:[], criadoEm:"2026-04-01"},
+    {id:"p10", nome:"Suco Natural", categoria:"Bebidas", preco:8.00, descricao:"Feito na hora, sabores variados.", icone:"🧃", foto:"", destaque:false, disponivel:true, estoque:40, peso:300,
+      ingredientes:["Fruta natural","Água"], alergenicos:[], nutricional:{calorias:110,proteinas:1,carboidratos:25,gorduras:0},
+      tamanhos:[{nome:"Copo 300ml",delta:0},{nome:"Jarra 1L",delta:8}], adicionais:[], criadoEm:"2026-06-30"}
+  ],
+  coupons: [
+    {id:"c1", codigo:"BEMVINDO10", valor:10, validade:"2026-12-31", ativo:true, tipo:"manual"},
+    {id:"c2", codigo:"PROMO5", valor:5, validade:"2026-08-31", ativo:true, tipo:"manual"}
+  ],
+  orders: [],
+  customers: {},
+  reviews: [
+    {id:"r1", produtoId:"p1", nome:"Marina", estrelas:5, comentario:"Melhor coxinha da região, super recomendo!", data:"2026-06-15"},
+    {id:"r2", produtoId:"p1", nome:"Carlos", estrelas:4, comentario:"Muito boa, chegou quentinha.", data:"2026-06-20"},
+    {id:"r3", produtoId:"p5", nome:"Ana", estrelas:5, comentario:"Brigadeiro maravilhoso, chocolate de verdade.", data:"2026-06-18"}
+  ],
+  employees: [
+    {id:"f1", nome:"Administrador", usuario:"admin", senha:"admin123", nivel:"administrador"}
+  ],
+  changeLog: []
+};
+
+/* ==================== FIREBASE (guarda TODOS os dados da loja na nuvem) ====================
+   Como ativar (grátis, leva 5 minutos):
+   1) Acesse https://console.firebase.google.com e crie um projeto.
+   2) No menu lateral, clique em "Firestore Database" > Criar banco de dados (modo produção).
+   3) Vá em Configurações do projeto (ícone de engrenagem) > Geral > "Seus apps" > ícone Web (</>) > cadastre o app.
+   4) O Firebase vai te dar um objeto firebaseConfig. Copie os valores e cole abaixo, no lugar de "COLE_AQUI...".
+   5) Em Firestore Database > Regras, cole isto para começar (depois dá pra restringir com login de admin):
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /{document=**} { allow read, write: if true; }
+          }
+        }
+   Enquanto os campos abaixo não forem preenchidos, a loja continua funcionando normalmente
+   salvando apenas neste aparelho (localStorage), como já fazia antes. */
+const firebaseConfig = {
+  apiKey: "AIzaSyAcL6QkcvKjbrTBMDqAHgqu-2E1xN7iHsY",
+  authDomain: "vovneide.firebaseapp.com",
+  projectId: "vovneide",
+  storageBucket: "vovneide.firebasestorage.app",
+  messagingSenderId: "43070758487",
+  appId: "1:43070758487:web:70b822032274d5750fcd12"
+};
+let db = null;
+let firebaseOk = false;
+let ignorarProximoSnapshot = false;
+try{
+  if(firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("COLE_AQUI")===-1){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    firebaseOk = true;
+  }
+}catch(e){ console.warn("Firebase não inicializado:", e); }
+const docNuvem = () => db.collection("loja").doc("estado");
+
+function iniciarSincronizacaoNuvem(){
+  if(!firebaseOk) return;
+  docNuvem().get().then(doc=>{
+    if(doc.exists){
+      state = doc.data();
+      localStorage.setItem("loja_state", JSON.stringify(state));
+      renderTudo();
+    } else {
+      docNuvem().set(state);
+    }
+    docNuvem().onSnapshot(doc=>{
+      if(ignorarProximoSnapshot){ ignorarProximoSnapshot=false; return; }
+      if(doc.exists){
+        state = doc.data();
+        localStorage.setItem("loja_state", JSON.stringify(state));
+        renderTudo();
+      }
+    });
+  }).catch(err=>console.warn("Erro ao sincronizar com a nuvem:", err));
+}
+
+let state = carregarEstado();
+let cart = [];
+let appliedCoupon = null;
+let isAdmin = false;
+let usuarioAdminAtual = null;
+let activeCategory = "Todos";
+let editingProductId = null;
+let editingCouponId = null;
+let editingFuncionarioId = null;
+let favoritos = JSON.parse(localStorage.getItem("loja_favoritos")||"[]");
+
+function carregarEstado(){
+  try{
+    const salvo = localStorage.getItem("loja_state");
+    if(salvo) return JSON.parse(salvo);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(stateInicial));
+}
+function salvarEstado(){
+  localStorage.setItem("loja_state", JSON.stringify(state));
+  if(firebaseOk){
+    ignorarProximoSnapshot = true;
+    docNuvem().set(state).catch(err=>console.warn("Erro ao salvar na nuvem:", err));
+  }
+}
+function logAlteracao(acao){
+  state.changeLog.unshift({data:new Date().toISOString(), usuario:(usuarioAdminAtual?usuarioAdminAtual.nome:"Sistema"), acao});
+  if(state.changeLog.length>300) state.changeLog.length = 300;
+}
+
+/* ==================== UTIL ==================== */
+function uid(prefix){ return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function brl(n){ return "R$ " + (isNaN(n)?0:n).toFixed(2).replace(".", ","); }
+function escapeHtml(str){ const d=document.createElement("div"); d.innerText = str==null?"":str; return d.innerHTML; }
+function openModal(id){ document.getElementById(id).classList.remove("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.getElementById("toastStack").appendChild(t);
+  setTimeout(()=>{ t.classList.add("sair"); setTimeout(()=>t.remove(), 300); }, 2500);
+}
+function mediaEstrelas(produtoId){
+  const avals = state.reviews.filter(r=>r.produtoId===produtoId);
+  if(avals.length===0) return {media:0, qtd:0};
+  const media = avals.reduce((s,a)=>s+a.estrelas,0)/avals.length;
+  return {media, qtd:avals.length};
+}
+function estrelasHtml(media){
+  const cheias = Math.round(media);
+  return '<span class="estrelas">'+ "★".repeat(cheias) + "☆".repeat(5-cheias) +'</span>';
+}
+function fotoProduto(p){
+  return p.foto && p.foto.trim() ? p.foto.trim() : (fotosPadraoCategoria[p.categoria] || "");
+}
+
+/* ==================== RENDER GERAL ==================== */
+function renderTudo(){
+  renderCategorias();
+  atualizarFiltroIngredientes();
+  renderProdutos();
+  renderMaisVendidos();
+  renderRecentes();
+  renderCombo();
+  renderBanners();
+  renderPromoCountdown();
+  atualizarBadgeHorario();
+  updateCartCount();
+  updateFavCount();
+  atualizarLinksFixos();
+  atualizarMapaLoja();
+  aplicarIdioma();
+  if(isAdmin) renderAdminAll();
+  salvarEstado();
+}
+function atualizarLinksFixos(){
+  document.getElementById("igBubble").href = state.config.instagramLink;
+  document.getElementById("igLinkTexto").href = state.config.instagramLink;
+  document.getElementById("waGroupBubble").href = state.config.whatsappGroupLink;
+  document.getElementById("waGroupLinkTexto").href = state.config.whatsappGroupLink;
+  document.getElementById("nomeLoja").textContent = state.config.storeName;
+  document.getElementById("taglineLoja").textContent = state.config.tagline;
+  document.getElementById("pixKeyDisplay").textContent = state.config.pixKey;
+  const pixInfoEl = document.getElementById("pixInfoChave");
+  if(pixInfoEl) pixInfoEl.textContent = state.config.pixKey;
+  document.title = state.config.storeName + " — Salgados e Doces";
+  const tr = document.getElementById("tempoRetiradaTxt");
+  const te = document.getElementById("tempoEntregaTxt");
+  if(tr) tr.textContent = state.config.tempoRetirada.min+"-"+state.config.tempoRetirada.max+" min";
+  if(te) te.textContent = state.config.tempoEntrega.min+"-"+state.config.tempoEntrega.max+" min";
+}
+function atualizarMapaLoja(){
+  const wrap = document.getElementById("mapaLojaWrap");
+  if(!wrap) return;
+  const q = encodeURIComponent(state.config.enderecoLoja || "");
+  wrap.innerHTML = '<iframe width="100%" height="220" style="border:0;" loading="lazy" src="https://maps.google.com/maps?q='+q+'&output=embed"></iframe>';
+}
+
+/* ==================== HORÁRIO DE FUNCIONAMENTO ==================== */
+function atualizarBadgeHorario(){
+  const el = document.getElementById("badgeHorario");
+  const agora = new Date();
+  const dia = agora.getDay();
+  const cfg = state.config.horarios[dia];
+  const badges = [];
+  const hhmm = agora.toTimeString().slice(0,5);
+  let aberto = false, proxAbertura = "";
+  if(cfg && cfg.aberto && hhmm >= cfg.ini && hhmm <= cfg.fim) aberto = true;
+  el.className = "badge-horario " + (aberto?"aberto":"fechado");
+  if(aberto){
+    el.textContent = "🟢 Aberto agora — fecha às " + cfg.fim;
+  } else {
+    for(let i=1;i<=7;i++){
+      const d = (dia+i)%7;
+      if(state.config.horarios[d] && state.config.horarios[d].aberto){ proxAbertura = ["domingo","segunda","terça","quarta","quinta","sexta","sábado"][d] + " às " + state.config.horarios[d].ini; break; }
+    }
+    el.textContent = "🔴 Fechado agora" + (proxAbertura ? " — abre " + proxAbertura : "");
+  }
+}
+setInterval(atualizarBadgeHorario, 60000);
+
+/* ==================== BANNERS / COUNTDOWN / POPUP ==================== */
+let bannerIdx = 0;
+function renderBanners(){
+  const wrap = document.getElementById("bannersCarrossel");
+  const banners = state.config.banners || [];
+  if(banners.length===0){ wrap.innerHTML=""; return; }
+  if(bannerIdx>=banners.length) bannerIdx = 0;
+  wrap.innerHTML = '<div class="banner-slide">'+escapeHtml(banners[bannerIdx])+'</div>';
+}
+setInterval(()=>{ bannerIdx++; renderBanners(); }, 4000);
+
+function renderPromoCountdown(){
+  const wrap = document.getElementById("promoCountdownWrap");
+  if(!state.config.promoFim){ wrap.classList.add("hidden"); return; }
+  const fim = new Date(state.config.promoFim).getTime();
+  if(isNaN(fim) || fim <= Date.now()){ wrap.classList.add("hidden"); return; }
+  wrap.classList.remove("hidden");
+}
+function tickCountdown(){
+  if(!state.config.promoFim) return;
+  const fim = new Date(state.config.promoFim).getTime();
+  const diff = fim - Date.now();
+  const box = document.getElementById("promoCountdownBox");
+  if(diff<=0){ document.getElementById("promoCountdownWrap").classList.add("hidden"); return; }
+  const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
+  box.textContent = (state.config.promoTexto||"Promoção") + " — termina em " + String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+}
+setInterval(tickCountdown, 1000);
+
+function mostrarPopupDesconto(){
+  const cfg = state.config.popup;
+  if(!cfg || !cfg.ativo) return;
+  if(sessionStorage.getItem("popup_mostrado")) return;
+  setTimeout(()=>{
+    document.getElementById("popupDescontoTexto").textContent = "Use o cupom " + cfg.codigo + " e ganhe desconto no seu primeiro pedido!";
+    openModal("popupDescontoModal");
+    sessionStorage.setItem("popup_mostrado","1");
+  }, (cfg.atraso||8)*1000);
+}
+
+/* ==================== NOTIFICAÇÕES ==================== */
+function ativarNotificacoes(){
+  if(!("Notification" in window)){ toast("Seu navegador não suporta notificações."); return; }
+  Notification.requestPermission().then(perm=>{
+    if(perm==="granted"){
+      toast("Notificações ativadas! Você receberá avisos de promoções.");
+      setTimeout(()=>{
+        new Notification(state.config.storeName, {body:"Promoção especial disponível agora! Confira o site."});
+      }, 5000);
+    } else {
+      toast("Notificações não autorizadas.");
+    }
+  });
+}
+
+/* ==================== FAVORITOS ==================== */
+function toggleFavorito(id){
+  if(favoritos.includes(id)) favoritos = favoritos.filter(f=>f!==id);
+  else favoritos.push(id);
+  localStorage.setItem("loja_favoritos", JSON.stringify(favoritos));
+  updateFavCount();
+  renderProdutos(); renderMaisVendidos(); renderRecentes(); renderCombo();
+}
+function updateFavCount(){ document.getElementById("favCount").textContent = favoritos.length; }
+function abrirFavoritos(){
+  const box = document.getElementById("favLista");
+  const lista = state.products.filter(p=>favoritos.includes(p.id));
+  box.innerHTML = lista.length===0 ? '<p class="vazio">Você ainda não tem favoritos.</p>' :
+    lista.map(p=>cardProdutoHtml(p)).join("");
+  openModal("favModal");
+}
+
+/* ==================== FILTROS ==================== */
+function toggleFiltros(){ document.getElementById("painelFiltros").classList.toggle("hidden"); }
+function atualizarFiltroIngredientes(){
+  const box = document.getElementById("chipsIngredientesFiltro");
+  const todos = new Set();
+  state.products.forEach(p=>(p.ingredientes||[]).forEach(i=>todos.add(i)));
+  const selecionados = window.__filtroIngredientes || [];
+  box.innerHTML = [...todos].map(ing=>
+    `<button type="button" class="chip-filtro ${selecionados.includes(ing)?'ativo':''}" onclick="toggleFiltroIngrediente('${escapeHtml(ing)}')">${escapeHtml(ing)}</button>`
+  ).join("");
+}
+function toggleFiltroIngrediente(ing){
+  window.__filtroIngredientes = window.__filtroIngredientes || [];
+  if(window.__filtroIngredientes.includes(ing)) window.__filtroIngredientes = window.__filtroIngredientes.filter(i=>i!==ing);
+  else window.__filtroIngredientes.push(ing);
+  atualizarFiltroIngredientes();
+  renderProdutos();
+}
+
+/* ==================== CATEGORIAS / PRODUTOS ==================== */
+function renderCategorias(){
+  const cats = ["Todos", ...new Set(state.products.map(p=>p.categoria))];
+  if(!cats.includes(activeCategory)) activeCategory = "Todos";
+  document.getElementById("categoriasNav").innerHTML = cats.map(c=>
+    `<button class="cat-btn ${c===activeCategory?'ativo':''}" onclick="selecionarCategoria('${c}')">${escapeHtml(c)}</button>`
+  ).join("");
+}
+function selecionarCategoria(c){ activeCategory = c; renderCategorias(); renderProdutos(); }
+
+function filtrarBase(lista){
+  const termo = document.getElementById("buscaInput").value.trim().toLowerCase();
+  const precoMax = parseFloat(document.getElementById("filtroPrecoMax").value);
+  const soFav = document.getElementById("filtroSoFavoritos").checked;
+  const ings = window.__filtroIngredientes || [];
+  lista = lista.filter(p => p.preco <= precoMax);
+  if(termo) lista = lista.filter(p => p.nome.toLowerCase().includes(termo));
+  if(soFav) lista = lista.filter(p => favoritos.includes(p.id));
+  if(ings.length) lista = lista.filter(p => ings.every(i => (p.ingredientes||[]).includes(i)));
+  return lista;
+}
+function cardProdutoHtml(p, destaqueTag){
+  const {media, qtd} = mediaEstrelas(p.id);
+  const foto = fotoProduto(p);
+  const semEstoque = p.disponivel===false || (typeof p.estoque==="number" && p.estoque<=0);
+  return `
+    <div class="produto-card">
+      ${p.destaque ? '<span class="badge-destaque">'+(destaqueTag||'Mais pedido')+'</span>' : ''}
+      <div class="produto-foto-wrap">
+        ${foto ? `<img src="${foto}" alt="${escapeHtml(p.nome)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+        <div class="produto-icon-fallback" style="${foto?'display:none;':''}">${p.icone||'🍽️'}</div>
+        <button class="btn-fav ${favoritos.includes(p.id)?'ativo':''}" onclick="event.stopPropagation();toggleFavorito('${p.id}')">${favoritos.includes(p.id)?'♥':'♡'}</button>
+        ${semEstoque ? '<span class="badge-esgotado">Esgotado</span>' : ''}
+      </div>
+      <div class="produto-corpo">
+        <h3 onclick="abrirDetalheProduto('${p.id}')">${escapeHtml(p.nome)}</h3>
+        <div>${estrelasHtml(media)} <span class="estrelas-num">${qtd>0?media.toFixed(1)+' ('+qtd+')':'sem avaliações'}</span></div>
+        <p class="produto-desc">${escapeHtml(p.descricao||'')}</p>
+        <div class="tag-preco">${brl(p.preco)}</div>
+      </div>
+      <button class="btn-add" ${semEstoque?'disabled':''} onclick="abrirDetalheProduto('${p.id}')">${semEstoque?'Esgotado':'Ver e adicionar'}</button>
+    </div>
+  `;
+}
+function renderProdutos(){
+  const grid = document.getElementById("produtosGrid");
+  let lista = state.products.filter(p => p.disponivel !== false);
+  if(activeCategory !== "Todos") lista = lista.filter(p => p.categoria === activeCategory);
+  lista = filtrarBase(lista);
+  if(lista.length === 0){ grid.innerHTML = '<p class="vazio">Nenhum produto encontrado.</p>'; return; }
+  grid.innerHTML = lista.map(p => cardProdutoHtml(p)).join("");
+}
+function renderMaisVendidos(){
+  const contagem = {};
+  state.orders.forEach(o => o.itens.forEach(it => { contagem[it.produtoId||it.nome] = (contagem[it.produtoId||it.nome]||0) + it.qty; }));
+  let lista = state.products.filter(p=>p.disponivel!==false && contagem[p.id]).sort((a,b)=>(contagem[b.id]||0)-(contagem[a.id]||0)).slice(0,6);
+  if(lista.length===0) lista = state.products.filter(p=>p.destaque && p.disponivel!==false).slice(0,6);
+  document.getElementById("maisVendidosGrid").innerHTML = lista.length? lista.map(p=>cardProdutoHtml(p,'Mais vendido')).join("") : '<p class="vazio">Ainda sem vendas suficientes.</p>';
+}
+function renderRecentes(){
+  let lista = [...state.products].filter(p=>p.disponivel!==false).sort((a,b)=> new Date(b.criadoEm||0) - new Date(a.criadoEm||0)).slice(0,6);
+  document.getElementById("recentesGrid").innerHTML = lista.length? lista.map(p=>cardProdutoHtml(p,'Novo')).join("") : '';
+}
+function renderCombo(){
+  const combo = state.config.combo;
+  const wrapTitulo = document.getElementById("secaoComboWrap");
+  const grid = document.getElementById("comboGrid");
+  if(!combo || !combo.ativo || !combo.produtos || combo.produtos.length===0){
+    wrapTitulo.classList.add("hidden"); grid.classList.add("hidden"); grid.innerHTML=""; return;
+  }
+  wrapTitulo.classList.remove("hidden"); grid.classList.remove("hidden");
+  const lista = state.products.filter(p=>combo.produtos.includes(p.id));
+  grid.innerHTML = lista.map(p=>{
+    const precoComDesconto = p.preco * (1-(combo.desconto||0)/100);
+    return `<div class="produto-card">
+      <span class="badge-destaque">-${combo.desconto}%</span>
+      <div class="produto-foto-wrap"><div class="produto-icon-fallback">${p.icone||'🍽️'}</div></div>
+      <div class="produto-corpo"><h3>${escapeHtml(p.nome)}</h3>
+      <p class="produto-desc">${escapeHtml(combo.nome)}</p>
+      <div class="tag-preco">${brl(precoComDesconto)} <span style="text-decoration:line-through;opacity:.6;font-size:.75rem;">${brl(p.preco)}</span></div></div>
+      <button class="btn-add" onclick="addToCart('${p.id}', null, [], [], ${combo.desconto||0})">Adicionar</button>
+    </div>`;
+  }).join("");
+}
+
+/* ==================== DETALHE DO PRODUTO ==================== */
+function abrirDetalheProduto(id){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  const semEstoque = p.disponivel===false || (typeof p.estoque==="number" && p.estoque<=0);
+  const {media, qtd} = mediaEstrelas(p.id);
+  const foto = fotoProduto(p);
+  const avals = state.reviews.filter(r=>r.produtoId===id);
+  const html = `
+    ${foto? `<img class="produto-detalhe-img" src="${foto}" alt="${escapeHtml(p.nome)}" onerror="this.style.display='none'">` : ''}
+    <h3>${escapeHtml(p.nome)}</h3>
+    <div>${estrelasHtml(media)} <span class="estrelas-num">${qtd>0?media.toFixed(1)+' ('+qtd+' avaliações)':'sem avaliações ainda'}</span></div>
+    <p class="muted">${escapeHtml(p.descricao||'')}</p>
+    <div class="tag-preco">${brl(p.preco)}</div>
+
+    <div class="grupo-opcao">
+      <h4>Tamanho</h4>
+      ${(p.tamanhos||[{nome:'Único',delta:0}]).map((t,i)=>`
+        <div class="opcao-linha"><label style="font-weight:400;margin:0;"><input type="radio" name="tam_${p.id}" value="${i}" ${i===0?'checked':''} style="width:auto;"> ${escapeHtml(t.nome)}</label><span>${t.delta>0?'+'+brl(t.delta):'—'}</span></div>
+      `).join("")}
+    </div>
+
+    ${(p.adicionais&&p.adicionais.length) ? `
+    <div class="grupo-opcao">
+      <h4>Adicionais</h4>
+      ${p.adicionais.map((a,i)=>`
+        <div class="opcao-linha"><label style="font-weight:400;margin:0;"><input type="checkbox" class="add_${p.id}" value="${i}" style="width:auto;"> ${escapeHtml(a.nome)}</label><span>+${brl(a.preco)}</span></div>
+      `).join("")}
+    </div>` : ''}
+
+    ${(p.ingredientes&&p.ingredientes.length) ? `
+    <div class="grupo-opcao">
+      <h4>Remover ingredientes</h4>
+      ${p.ingredientes.map((ing,i)=>`
+        <div class="opcao-linha"><label style="font-weight:400;margin:0;"><input type="checkbox" class="rem_${p.id}" value="${escapeHtml(ing)}" style="width:auto;"> Sem ${escapeHtml(ing)}</label></div>
+      `).join("")}
+    </div>` : ''}
+
+    <div class="grupo-opcao">
+      <h4>Informações</h4>
+      <div class="chips-wrap">${(p.ingredientes||[]).map(i=>`<span class="tag-ing">${escapeHtml(i)}</span>`).join("")}</div>
+      <div class="chips-wrap" style="margin-top:6px;">${(p.alergenicos||[]).map(a=>`<span class="tag-alerg">⚠ ${escapeHtml(a)}</span>`).join("")}</div>
+      <table class="info-tabela">
+        <tr><td>Peso</td><td>${p.peso||'-'} g</td></tr>
+        <tr><td>Calorias</td><td>${(p.nutricional&&p.nutricional.calorias)||'-'} kcal</td></tr>
+        <tr><td>Proteínas</td><td>${(p.nutricional&&p.nutricional.proteinas)||'-'} g</td></tr>
+        <tr><td>Carboidratos</td><td>${(p.nutricional&&p.nutricional.carboidratos)||'-'} g</td></tr>
+        <tr><td>Gorduras</td><td>${(p.nutricional&&p.nutricional.gorduras)||'-'} g</td></tr>
+        <tr><td>Estoque disponível</td><td>${typeof p.estoque==='number'?p.estoque+' un.':'—'}</td></tr>
+      </table>
+    </div>
+
+    <button class="btn-primario" ${semEstoque?'disabled':''} onclick="confirmarAddDetalhe('${p.id}')">${semEstoque?'Esgotado':'Adicionar ao carrinho'}</button>
+
+    <div class="grupo-opcao">
+      <h4>Avaliações (${avals.length})</h4>
+      <div id="listaAvaliacoesProduto">
+        ${avals.length? avals.map(a=>`<div class="avaliacao-item"><strong>${escapeHtml(a.nome)}</strong> ${estrelasHtml(a.estrelas)}<br><span class="muted">${escapeHtml(a.comentario)}</span></div>`).join("") : '<p class="muted">Seja o primeiro a avaliar!</p>'}
+      </div>
+      <label>Seu nome</label><input type="text" id="avalNome">
+      <label>Nota</label>
+      <select id="avalEstrelas"><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select>
+      <label>Comentário</label><textarea id="avalComentario"></textarea>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="enviarAvaliacao('${p.id}')">Enviar avaliação</button>
+    </div>
+  `;
+  document.getElementById("produtoDetalheConteudo").innerHTML = html;
+  openModal("produtoModal");
+}
+function confirmarAddDetalhe(id){
+  const p = state.products.find(x=>x.id===id);
+  const tamIdx = parseInt((document.querySelector(`input[name="tam_${id}"]:checked`)||{}).value || 0);
+  const tamanho = (p.tamanhos||[{nome:'Único',delta:0}])[tamIdx] || {nome:'Único',delta:0};
+  const adicionaisSel = [...document.querySelectorAll(`.add_${id}:checked`)].map(el=>p.adicionais[parseInt(el.value)]);
+  const removidos = [...document.querySelectorAll(`.rem_${id}:checked`)].map(el=>el.value);
+  addToCart(id, tamanho, adicionaisSel, removidos, 0);
+  closeModal("produtoModal");
+}
+function enviarAvaliacao(produtoId){
+  const nome = document.getElementById("avalNome").value.trim();
+  const estrelas = parseInt(document.getElementById("avalEstrelas").value);
+  const comentario = document.getElementById("avalComentario").value.trim();
+  if(!nome || !comentario){ toast("Preencha nome e comentário."); return; }
+  state.reviews.push({id:uid("rev"), produtoId, nome, estrelas, comentario, data:new Date().toISOString()});
+  salvarEstado();
+  toast("Avaliação enviada, obrigado!");
+  abrirDetalheProduto(produtoId);
+  renderProdutos();
+}
+
+/* ==================== CARRINHO ==================== */
+function addToCart(id, tamanho, adicionais, removidos, descontoCombo){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  tamanho = tamanho || {nome:'Único', delta:0};
+  adicionais = adicionais || [];
+  removidos = removidos || [];
+  const precoBase = (p.preco + (tamanho.delta||0) + adicionais.reduce((s,a)=>s+a.preco,0)) * (1-(descontoCombo||0)/100);
+  const chave = id+"|"+tamanho.nome+"|"+adicionais.map(a=>a.nome).join(",")+"|"+removidos.join(",");
+  const item = cart.find(c=>c.chave===chave);
+  if(item) item.qty++;
+  else cart.push({chave, id:p.id, nome:p.nome + (tamanho.nome!=='Único'&&tamanho.nome!=='Única'?' ('+tamanho.nome+')':'') + (adicionais.length?' +'+adicionais.map(a=>a.nome).join(', '):'') + (removidos.length?' (sem '+removidos.join(', ')+')':''), preco:precoBase, qty:1, brinde:false});
+  updateCartCount();
+  toast(p.nome + " adicionado ao carrinho");
+}
+function changeQty(chave, delta){
+  const item = cart.find(c=>c.chave===chave);
+  if(!item) return;
+  item.qty += delta;
+  if(item.qty <= 0) cart = cart.filter(c=>c.chave!==chave);
+  updateCartCount();
+  renderCart();
+}
+function updateCartCount(){
+  document.getElementById("cartCount").textContent = cart.reduce((s,c)=>s+c.qty,0);
+}
+function calcularBrinde(){
+  const subtotal = cart.filter(c=>!c.brinde).reduce((s,c)=>s+c.preco*c.qty,0);
+  cart = cart.filter(c=>!c.brinde);
+  const brindesAplicaveis = (state.config.brindes||[]).filter(b=>subtotal>=b.valorMinimo);
+  brindesAplicaveis.forEach(b=>{
+    cart.push({chave:"brinde_"+b.nome, id:null, nome:"🎁 Brinde: "+b.nome, preco:0, qty:1, brinde:true});
+  });
+  return brindesAplicaveis;
+}
+function abrirCarrinho(){ renderCart(); openModal("cartModal"); }
+function renderCart(){
+  const brindes = calcularBrinde();
+  const box = document.getElementById("cartItems");
+  if(cart.length===0){ box.innerHTML = '<p class="vazio">Seu carrinho está vazio.</p>'; }
+  else {
+    box.innerHTML = cart.map(c => `
+      <div class="cart-item">
+        <div class="cart-item-info"><strong>${escapeHtml(c.nome)}</strong><span class="muted">${brl(c.preco)} un.</span></div>
+        <div class="qty-control">
+          <button onclick="changeQty('${c.chave}',-1)" ${c.brinde?'disabled':''}>−</button>
+          <span>${c.qty}</span>
+          <button onclick="changeQty('${c.chave}',1)" ${c.brinde?'disabled':''}>+</button>
+        </div>
+        <div class="cart-item-total">${brl(c.preco*c.qty)}</div>
+      </div>
+    `).join("");
+  }
+  document.getElementById("brindeInfo").innerHTML = brindes.length? brindes.map(b=>`<div class="brinde-linha">🎁 Você ganhou: ${escapeHtml(b.nome)}!</div>`).join("") : "";
+  const subtotal = cart.filter(c=>!c.brinde).reduce((s,c)=>s+c.preco*c.qty,0);
+  document.getElementById("cartSubtotal").textContent = brl(subtotal);
+  document.getElementById("btnIrCheckout").disabled = cart.filter(c=>!c.brinde).length===0;
+}
+
+/* ==================== CHECKOUT ==================== */
+function abrirCheckout(){
+  closeModal("cartModal");
+  preencherBairros();
+  preencherHorariosResumo();
+  openModal("checkoutModal");
+  onEntregaChange();
+  onPagamentoChange();
+  onAgendarChange();
+}
+function preencherBairros(){
+  const sel = document.getElementById("inputBairro");
+  sel.innerHTML = (state.config.bairros||[]).map(b=>`<option value="${escapeHtml(b.nome)}">${escapeHtml(b.nome)} (${brl(b.taxa)})</option>`).join("");
+}
+function preencherHorariosResumo(){ /* placeholder para futura expansão */ }
+function onEntregaChange(){
+  const tipo = document.querySelector('input[name="tipoEntrega"]:checked').value;
+  document.getElementById("enderecoWrap").classList.toggle("hidden", tipo!=="entrega");
+  recalcResumo();
+}
+function onAgendarChange(){
+  document.getElementById("agendamentoWrap").classList.toggle("hidden", !document.getElementById("chkAgendar").checked);
+}
+function onPagamentoChange(){
+  const pagamento = document.querySelector('input[name="pagamento"]:checked').value;
+  document.getElementById("pixInfo").classList.toggle("hidden", pagamento!=="pix");
+  recalcResumo();
+}
+function buscarCep(){
+  const cep = document.getElementById("inputCep").value.replace(/\D/g,"");
+  if(cep.length!==8) return;
+  fetch("https://viacep.com.br/ws/"+cep+"/json/").then(r=>r.json()).then(d=>{
+    if(d.erro){ toast("CEP não encontrado."); return; }
+    document.getElementById("inputEndereco").value = (d.logradouro||"") + (d.complemento?", "+d.complemento:"");
+    const sel = document.getElementById("inputBairro");
+    const opcoes = [...sel.options].map(o=>o.value.toLowerCase());
+    const idx = opcoes.findIndex(o=>o===((d.bairro||"").toLowerCase()));
+    if(idx>=0) sel.selectedIndex = idx;
+    toast("Endereço preenchido pelo CEP!");
+    recalcResumo();
+  }).catch(()=> toast("Não foi possível consultar o CEP agora."));
+}
+function preencherPontosCliente(){
+  const tel = document.getElementById("inputTelefone").value.trim();
+  const cli = state.customers[tel];
+  const wrap = document.getElementById("pontosResgateWrap");
+  const info = document.getElementById("pontosClienteInfo");
+  if(cli && cli.pontos>0){
+    info.textContent = "Você tem " + cli.pontos + " pontos de fidelidade acumulados.";
+    if(cli.pontos >= state.config.pontosParaResgate){
+      wrap.style.display = "flex";
+      document.getElementById("pontosResgateLabel").textContent = "Usar " + state.config.pontosParaResgate + " pontos (-"+brl(state.config.valorResgate)+")";
+    } else { wrap.style.display = "none"; }
+  } else { info.textContent = ""; wrap.style.display = "none"; }
+  recalcResumo();
+}
+function calcTotals(){
+  const subtotal = cart.filter(c=>!c.brinde).reduce((s,c)=>s+c.preco*c.qty,0);
+  let discount = 0;
+  if(appliedCoupon) discount = subtotal * (appliedCoupon.valor/100);
+
+  let autoDiscount = 0;
+  const da = state.config.descontoAcimaDe;
+  if(da && da.ativo && subtotal >= (da.valorMinimo||0)){
+    autoDiscount = subtotal * ((da.percentual||0)/100);
+  }
+
+  let afterDiscount = subtotal - discount - autoDiscount;
+
+  let pontosDiscount = 0;
+  const chkPontos = document.getElementById("chkUsarPontos");
+  if(chkPontos && chkPontos.checked && chkPontos.style.display!=="none"){
+    pontosDiscount = state.config.valorResgate;
+    afterDiscount -= pontosDiscount;
+  }
+
+  const tipoEntrega = document.querySelector('input[name="tipoEntrega"]:checked') ? document.querySelector('input[name="tipoEntrega"]:checked').value : "retirada";
+  let deliveryFee = 0, bairroInfo = null;
+  if(tipoEntrega === "entrega"){
+    const bairroNome = document.getElementById("inputBairro") ? document.getElementById("inputBairro").value : null;
+    bairroInfo = (state.config.bairros||[]).find(b=>b.nome===bairroNome);
+    if(bairroInfo){
+      deliveryFee = (bairroInfo.freteGratis>0 && afterDiscount>=bairroInfo.freteGratis) ? 0 : bairroInfo.taxa;
+    } else {
+      const min = state.config.freeDeliveryMin || 0;
+      deliveryFee = (min > 0 && afterDiscount >= min) ? 0 : state.config.deliveryFee;
+    }
+  }
+  const pagamento = document.querySelector('input[name="pagamento"]:checked') ? document.querySelector('input[name="pagamento"]:checked').value : "pix";
+  let cardFee = 0;
+  if(pagamento === "credito") cardFee = afterDiscount * (state.config.creditFeePercent/100);
+  if(pagamento === "debito") cardFee = afterDiscount * (state.config.debitFeePercent/100);
+  const total = afterDiscount + deliveryFee + cardFee;
+  return {subtotal, discount, autoDiscount, pontosDiscount, deliveryFee, cardFee, total, tipoEntrega, pagamento, bairroInfo};
+}
+function recalcResumo(){
+  const t = calcTotals();
+  document.getElementById("resSubtotal").textContent = brl(t.subtotal);
+  document.getElementById("resDesconto").textContent = "-" + brl(t.discount);
+  document.getElementById("linhaDesconto").classList.toggle("hidden", t.discount<=0);
+  const da = state.config.descontoAcimaDe;
+  document.getElementById("labelDescontoAuto").textContent = "Desconto (compra acima de " + brl(da?da.valorMinimo:60) + ")";
+  document.getElementById("resDescontoAuto").textContent = "-" + brl(t.autoDiscount);
+  document.getElementById("linhaDescontoAuto").classList.toggle("hidden", t.autoDiscount<=0);
+  document.getElementById("resDescontoPontos").textContent = "-" + brl(t.pontosDiscount);
+  document.getElementById("linhaPontos").classList.toggle("hidden", t.pontosDiscount<=0);
+  document.getElementById("resEntrega").textContent = t.deliveryFee>0 ? brl(t.deliveryFee) : "Grátis";
+  document.getElementById("linhaEntrega").classList.toggle("hidden", t.tipoEntrega!=="entrega");
+  document.getElementById("resTaxaCartao").textContent = brl(t.cardFee);
+  document.getElementById("linhaTaxaCartao").classList.toggle("hidden", t.cardFee<=0);
+  document.getElementById("resTotal").textContent = brl(t.total);
+}
+function applyCoupon(){
+  let code = document.getElementById("cupomInput").value.trim().toUpperCase();
+  if(!code){ toast("Digite um cupom."); return; }
+  const c = state.coupons.find(x=>x.codigo.toUpperCase()===code);
+  if(!c){ toast("Cupom não encontrado."); return; }
+  if(!c.ativo){ toast("Esse cupom está inativo."); return; }
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const val = new Date(c.validade + "T23:59:59");
+  if(val < hoje){ toast("Esse cupom expirou."); return; }
+  appliedCoupon = c;
+  const el = document.getElementById("cupomAplicado");
+  el.textContent = "Cupom " + c.codigo + " aplicado (-" + c.valor + "%)";
+  el.classList.remove("hidden");
+  recalcResumo();
+  toast("Cupom aplicado!");
+}
+function labelPagamento(p){
+  return {pix:"Pix", debito:"Cartão de Débito", credito:"Cartão de Crédito", dinheiro:"Dinheiro"}[p] || p;
+}
+function montarMensagem(dados, t){
+  const linhas = [];
+  linhas.push("🛒 *Novo Pedido - " + state.config.storeName + "*");
+  if(dados.agendamento) linhas.push("📅 Agendado para: " + dados.agendamento.data + " às " + dados.agendamento.hora);
+  linhas.push("");
+  linhas.push("👤 Nome: " + dados.nome);
+  linhas.push("📞 Telefone: " + dados.telefone);
+  linhas.push("");
+  linhas.push("📋 *Itens:*");
+  cart.forEach(c => linhas.push(c.qty + "x " + c.nome + " - " + brl(c.preco*c.qty)));
+  linhas.push("");
+  linhas.push("Subtotal: " + brl(t.subtotal));
+  if(t.discount > 0) linhas.push("Cupom (" + appliedCoupon.codigo + "): -" + brl(t.discount));
+  if(t.autoDiscount > 0) linhas.push("Desconto acima de R$60: -" + brl(t.autoDiscount));
+  if(t.pontosDiscount > 0) linhas.push("Desconto por pontos: -" + brl(t.pontosDiscount));
+  if(t.tipoEntrega === "entrega") linhas.push("Taxa de entrega: " + (t.deliveryFee>0?brl(t.deliveryFee):"Grátis"));
+  if(t.cardFee > 0) linhas.push("Taxa do cartão (" + (t.pagamento==="credito"?"crédito":"débito") + "): " + brl(t.cardFee));
+  linhas.push("*Total: " + brl(t.total) + "*");
+  linhas.push("");
+  linhas.push(t.tipoEntrega === "entrega" ? ("📍 Endereço: " + dados.endereco + " - " + dados.bairro) : "📍 Retirada no local");
+  linhas.push("💳 Pagamento: " + labelPagamento(t.pagamento));
+  if(t.pagamento === "pix") linhas.push("🔑 Chave Pix: " + state.config.pixKey);
+  if(dados.obs) { linhas.push(""); linhas.push("📝 Observações: " + dados.obs); }
+  linhas.push("");
+  linhas.push("Código do pedido: " + dados.codigoPedido);
+  linhas.push("Obrigado pela preferência! 😊");
+  return linhas.join("\n");
+}
+function finalizeOrder(){
+  const nome = document.getElementById("inputNome").value.trim();
+  const telefone = document.getElementById("inputTelefone").value.trim();
+  const aniversario = document.getElementById("inputAniversario").value;
+  const codigoIndicacao = document.getElementById("inputIndicacao").value.trim();
+  const tipoEntrega = document.querySelector('input[name="tipoEntrega"]:checked').value;
+  const endereco = document.getElementById("inputEndereco").value.trim();
+  const bairro = document.getElementById("inputBairro").value;
+  const obs = document.getElementById("inputObs").value.trim();
+  const agendar = document.getElementById("chkAgendar").checked;
+  const dataAgenda = document.getElementById("inputDataAgenda").value;
+  const horaAgenda = document.getElementById("inputHoraAgenda").value;
+  if(!nome || !telefone){ toast("Preencha nome e telefone."); return; }
+  if(tipoEntrega === "entrega" && !endereco){ toast("Informe o endereço de entrega."); return; }
+  if(agendar && (!dataAgenda || !horaAgenda)){ toast("Informe a data e o horário do agendamento."); return; }
+  if(cart.filter(c=>!c.brinde).length === 0){ toast("Seu carrinho está vazio."); return; }
+
+  // cupom de indicação
+  if(codigoIndicacao && !state.customers[telefone]){
+    const descontoIndicacao = state.config.indicacaoDesconto || 0;
+    if(descontoIndicacao>0){
+      appliedCoupon = {id:"ind_"+Date.now(), codigo:"INDICACAO", valor:descontoIndicacao, validade:"2099-12-31", ativo:true, tipo:"indicacao"};
+    }
+  }
+
+  const t = calcTotals();
+  const codigoPedido = "PED-" + Math.random().toString(36).slice(2,8).toUpperCase();
+  const agendamento = agendar ? {data:dataAgenda, hora:horaAgenda} : null;
+  const dados = {nome, telefone, endereco, bairro, obs, agendamento, codigoPedido};
+  const mensagem = montarMensagem(dados, t);
+
+  const pontosGanhos = Math.floor(t.total * (state.config.pontosPorReal||0));
+
+  const pedido = {
+    id: uid("ped"),
+    codigo: codigoPedido,
+    data: new Date().toISOString(),
+    cliente: nome,
+    telefone,
+    itens: cart.map(c => ({produtoId:c.id, nome:c.nome, qty:c.qty, preco:c.preco})),
+    subtotal: t.subtotal, discount: t.discount, autoDiscount: t.autoDiscount, pontosDiscount: t.pontosDiscount, deliveryFee: t.deliveryFee,
+    cardFee: t.cardFee, total: t.total, tipoEntrega: t.tipoEntrega, pagamento: t.pagamento,
+    bairro, endereco, agendamento, pontosGanhos,
+    status: "Pendente",
+    historicoStatus:[{status:"Pendente", data:new Date().toISOString()}]
+  };
+  state.orders.unshift(pedido);
+
+  if(!state.customers[telefone]) state.customers[telefone] = {nome, telefone, pedidos: [], pontos:0, aniversario:""};
+  state.customers[telefone].nome = nome;
+  if(aniversario) state.customers[telefone].aniversario = aniversario;
+  state.customers[telefone].pedidos.push({data: pedido.data, itens: pedido.itens, codigo:codigoPedido});
+  state.customers[telefone].pontos = (state.customers[telefone].pontos||0) + pontosGanhos;
+  if(document.getElementById("chkUsarPontos").checked && t.pontosDiscount>0){
+    state.customers[telefone].pontos -= state.config.pontosParaResgate;
+  }
+
+  const numero = state.config.whatsappNumber.replace(/\D/g, "");
+  const link = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensagem);
+  window.open(link, "_blank");
+
+  cart = [];
+  appliedCoupon = null;
+  document.getElementById("cupomAplicado").classList.add("hidden");
+  document.getElementById("cupomInput").value = "";
+  updateCartCount();
+  closeModal("checkoutModal");
+
+  window.__ultimoPedidoId = pedido.id;
+  document.getElementById("codigoPedidoConfirmado").textContent = codigoPedido;
+  document.getElementById("pontosGanhosTexto").textContent = pontosGanhos>0 ? ("Você ganhou " + pontosGanhos + " pontos de fidelidade neste pedido!") : "";
+  openModal("confirmadoModal");
+  toast("Pedido enviado! Confira o WhatsApp.");
+  salvarEstado();
+  renderTudo();
+}
+
+/* ==================== RECIBO PDF (tamanho de bobina de maquininha/impressora térmica 80mm) ==================== */
+function baixarReciboPdf(pedidoId){
+  const p = state.orders.find(o=>o.id===pedidoId);
+  if(!p){ toast("Pedido não encontrado."); return; }
+  const { jsPDF } = window.jspdf;
+  const LARG = 80; // largura da bobina em mm (padrão da maioria das maquininhas/impressoras térmicas)
+  const MARGEM = 3;
+  const DIR = LARG - MARGEM; // posição de alinhamento à direita
+  const LARG_UTIL = LARG - 2*MARGEM;
+
+  // doc "de medida": só para calcular quantas linhas o endereço e os nomes dos produtos vão ocupar,
+  // usando as mesmas fontes do recibo final — assim a altura da página nunca fica curta demais.
+  const medida = new jsPDF({unit:"mm", format:[LARG, 200]});
+  medida.setFontSize(7.5);
+  const linhasEndereco = medida.splitTextToSize(state.config.enderecoLoja||"", LARG_UTIL);
+  medida.setFontSize(8);
+  const linhasItens = p.itens.map(it => medida.splitTextToSize(it.qty + "x " + it.nome, LARG_UTIL - 16));
+
+  const linhasExtras = (p.discount>0?1:0)+(p.autoDiscount>0?1:0)+(p.pontosDiscount>0?1:0)+(p.deliveryFee>0?1:0)+(p.cardFee>0?1:0);
+  const totalLinhasItens = linhasItens.reduce((s,arr)=>s+arr.length,0);
+
+  const alturaMm =
+    8 + 5 +                              // margem topo + nome da loja
+    (linhasEndereco.length*3.6) + 2 +    // endereço (pode ter mais de uma linha)
+    5 +                                  // linha tracejada
+    4.5*4 +                              // pedido / data / cliente / telefone
+    5 +                                  // linha
+    totalLinhasItens*4.2 +               // itens (cada linha de cada item)
+    6 +                                  // linha + respiro
+    4.5*(1+linhasExtras) +               // subtotal + descontos/taxas
+    6 +                                  // linha + respiro
+    5.5 + 4 + 6 +                        // total / pagamento / status
+    8;                                   // agradecimento + margem final
+
+  const doc = new jsPDF({unit:"mm", format:[LARG, alturaMm]});
+  let y = 8;
+  doc.setFontSize(11); doc.text(state.config.storeName, LARG/2, y, {align:"center"}); y+=5;
+  doc.setFontSize(7.5);
+  linhasEndereco.forEach(linha=>{ doc.text(linha, LARG/2, y, {align:"center"}); y+=3.6; });
+  y+=2;
+  doc.setLineDashPattern([1,1],0); doc.line(MARGEM,y,DIR,y); y+=5;
+  doc.setFontSize(8);
+  doc.text("Pedido: " + p.codigo, MARGEM, y); y+=4.5;
+  doc.text(new Date(p.data).toLocaleString('pt-BR'), MARGEM, y); y+=4.5;
+  doc.text("Cliente: " + p.cliente, MARGEM, y); y+=4.5;
+  doc.text("Tel: " + p.telefone, MARGEM, y); y+=5.5;
+  doc.line(MARGEM,y,DIR,y); y+=5;
+  doc.setFontSize(8);
+  p.itens.forEach((it,i)=>{
+    linhasItens[i].forEach((linha,j)=>{
+      doc.text(linha, MARGEM, y);
+      if(j===0) doc.text(brl(it.preco*it.qty), DIR, y, {align:"right"});
+      y+=4.2;
+    });
+  });
+  y+=1; doc.line(MARGEM,y,DIR,y); y+=5;
+  doc.text("Subtotal", MARGEM, y); doc.text(brl(p.subtotal), DIR, y, {align:"right"}); y+=4.5;
+  if(p.discount>0){ doc.text("Desconto cupom", MARGEM, y); doc.text("-"+brl(p.discount), DIR, y, {align:"right"}); y+=4.5; }
+  if(p.autoDiscount>0){ doc.text("Desconto +R$60", MARGEM, y); doc.text("-"+brl(p.autoDiscount), DIR, y, {align:"right"}); y+=4.5; }
+  if(p.pontosDiscount>0){ doc.text("Desconto pontos", MARGEM, y); doc.text("-"+brl(p.pontosDiscount), DIR, y, {align:"right"}); y+=4.5; }
+  if(p.deliveryFee>0){ doc.text("Entrega", MARGEM, y); doc.text(brl(p.deliveryFee), DIR, y, {align:"right"}); y+=4.5; }
+  if(p.cardFee>0){ doc.text("Taxa cartão", MARGEM, y); doc.text(brl(p.cardFee), DIR, y, {align:"right"}); y+=4.5; }
+  y+=1; doc.line(MARGEM,y,DIR,y); y+=5;
+  doc.setFontSize(10); doc.text("TOTAL", MARGEM, y); doc.text(brl(p.total), DIR, y, {align:"right"}); y+=5.5;
+  doc.setFontSize(7.5); doc.text("Pagamento: " + labelPagamento(p.pagamento), MARGEM, y); y+=4;
+  doc.text("Status: " + p.status, MARGEM, y); y+=6;
+  doc.setFontSize(7.5); doc.text("Obrigado pela preferência! 😊", LARG/2, y, {align:"center"});
+  doc.save("recibo-" + p.codigo + ".pdf");
+}
+
+/* ==================== RASTREIO DE PEDIDO ==================== */
+function abrirRastreio(){ openModal("rastreioModal"); }
+function buscarPedidosCliente(){
+  const tel = document.getElementById("rastreioTelefone").value.trim();
+  const box = document.getElementById("rastreioResultado");
+  const pedidos = state.orders.filter(o=>o.telefone===tel);
+  if(pedidos.length===0){ box.innerHTML = '<p class="vazio">Nenhum pedido encontrado para esse telefone.</p>'; return; }
+  const etapas = ["Pendente","Preparando","Pronto","Entregue"];
+  box.innerHTML = pedidos.map(p=>{
+    const idxAtual = etapas.indexOf(p.status);
+    return `<div class="admin-card">
+      <strong>${p.codigo}</strong> — ${new Date(p.data).toLocaleString('pt-BR')}<br>
+      <span class="muted">${p.itens.map(i=>i.qty+'x '+i.nome).join(', ')}</span>
+      <div class="barra-passos">
+        ${etapas.map((e,i)=>`<div class="passo ${i<idxAtual?'feito':(i===idxAtual?'ativo':'')}"><div class="bola">${i+1}</div>${e}</div>`).join("")}
+      </div>
+      <strong>${brl(p.total)}</strong>
+      <button class="btn-secundario" style="margin-top:8px;" onclick="baixarReciboPdf('${p.id}')">⬇️ Baixar recibo PDF</button>
+    </div>`;
+  }).join("");
+}
+
+/* ==================== ADMIN: LOGIN E NÍVEIS ==================== */
+function abrirAdminLogin(){ openModal("adminLoginModal"); }
+function permissoesNivel(nivel){
+  if(nivel==="administrador") return ["dashboard","produtos","pedidos","cupons","marketing","entrega","clientes","funcionarios","historico","config","dados"];
+  if(nivel==="gerente") return ["dashboard","produtos","pedidos","cupons","marketing","entrega","clientes","historico"];
+  return ["pedidos","clientes"];
+}
+function tentarLoginAdmin(){
+  const usuario = document.getElementById("adminUsuarioInput").value.trim();
+  const senha = document.getElementById("adminSenhaInput").value;
+  let func = state.employees.find(f=>f.usuario===usuario && f.senha===senha);
+  if(!func && senha === state.config.adminPassword){
+    func = {id:"master", nome:"Administrador", usuario:usuario||"admin", nivel:"administrador"};
+  }
+  if(func){
+    isAdmin = true;
+    usuarioAdminAtual = func;
+    closeModal("adminLoginModal");
+    document.getElementById("adminUsuarioInput").value = "";
+    document.getElementById("adminSenhaInput").value = "";
+    document.getElementById("lojaView").classList.add("hidden");
+    document.querySelector(".bubble-stack").classList.add("hidden");
+    document.getElementById("fabCarrinho").classList.add("hidden");
+    document.getElementById("adminView").classList.remove("hidden");
+    document.getElementById("adminUsuarioLogado").textContent = func.nome + " (" + func.nivel + ")";
+    aplicarPermissoesAbas(func.nivel);
+    renderAdminAll();
+  } else {
+    toast("Usuário ou senha incorretos.");
+  }
+}
+function aplicarPermissoesAbas(nivel){
+  const permitidas = permissoesNivel(nivel);
+  document.querySelectorAll(".admin-tab-btn").forEach(btn=>{
+    const aba = btn.id.replace("tabbtn-","");
+    btn.classList.toggle("hidden", !permitidas.includes(aba));
+  });
+  mostrarAbaAdmin(permitidas[0]);
+}
+function sairAdmin(){
+  isAdmin = false;
+  usuarioAdminAtual = null;
+  document.getElementById("adminView").classList.add("hidden");
+  document.getElementById("lojaView").classList.remove("hidden");
+  document.querySelector(".bubble-stack").classList.remove("hidden");
+  document.getElementById("fabCarrinho").classList.remove("hidden");
+}
+function mostrarAbaAdmin(nome){
+  document.querySelectorAll(".admin-aba").forEach(el => el.classList.add("hidden"));
+  document.getElementById("aba-" + nome).classList.remove("hidden");
+  document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("ativo"));
+  document.getElementById("tabbtn-" + nome).classList.add("ativo");
+  if(nome==="dashboard") renderDashboard();
+}
+function renderAdminAll(){
+  renderAdminProdutos();
+  renderAdminCupons();
+  preencherConfigForm();
+  renderAdminClientes();
+  renderAdminPedidos();
+  renderAdminFuncionarios();
+  renderHistorico();
+  renderMarketingAdmin();
+  renderEntregaAdmin();
+  renderDashboard();
+}
+
+/* ==================== ADMIN: DASHBOARD ==================== */
+let charts = {};
+function renderDashboard(){
+  const box = document.getElementById("dashKpis");
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const faturHoje = state.orders.filter(o=> new Date(o.data) >= hoje).reduce((s,o)=>s+o.total,0);
+  const totalPedidos = state.orders.length;
+  const ticketMedio = totalPedidos? state.orders.reduce((s,o)=>s+o.total,0)/totalPedidos : 0;
+  const totalClientes = Object.keys(state.customers).length;
+  box.innerHTML = `
+    <div class="dash-kpi"><div class="num">${brl(faturHoje)}</div><div class="lbl">Faturamento hoje</div></div>
+    <div class="dash-kpi"><div class="num">${totalPedidos}</div><div class="lbl">Pedidos totais</div></div>
+    <div class="dash-kpi"><div class="num">${brl(ticketMedio)}</div><div class="lbl">Ticket médio</div></div>
+    <div class="dash-kpi"><div class="num">${totalClientes}</div><div class="lbl">Clientes cadastrados</div></div>
+  `;
+  montarGraficoDiario();
+  montarGraficoSemanal();
+  montarGraficoMensal();
+  renderAgendaEncomendas();
+}
+function faturamentoPorDia(dias){
+  const labels = [], valores = [];
+  for(let i=dias-1;i>=0;i--){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    const dEnd = new Date(d); dEnd.setDate(d.getDate()+1);
+    const total = state.orders.filter(o=>{ const od=new Date(o.data); return od>=d && od<dEnd; }).reduce((s,o)=>s+o.total,0);
+    labels.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    valores.push(total.toFixed(2));
+  }
+  return {labels, valores};
+}
+function montarGraficoDiario(){
+  const el = document.getElementById("chartDiario");
+  if(typeof Chart==="undefined"){ el.parentElement.innerHTML = '<p class="grafico-erro">Gráfico não carregou (sem internet). Confira sua conexão e recarregue a página.</p>'; return; }
+  const {labels, valores} = faturamentoPorDia(14);
+  if(charts.diario) charts.diario.destroy();
+  charts.diario = new Chart(el, {type:"line", data:{labels, datasets:[{label:"Faturamento (R$)", data:valores, borderColor:"#FF6A00", backgroundColor:"rgba(255,106,0,.15)", fill:true, tension:.3}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+}
+function montarGraficoSemanal(){
+  const el = document.getElementById("chartSemanal");
+  if(typeof Chart==="undefined"){ el.parentElement.innerHTML = '<p class="grafico-erro">Gráfico não carregou (sem internet). Confira sua conexão e recarregue a página.</p>'; return; }
+  const labels = [], valores = [];
+  for(let i=7;i>=0;i--){
+    const fim = new Date(); fim.setHours(23,59,59,999); fim.setDate(fim.getDate()-(i*7));
+    const ini = new Date(fim); ini.setDate(fim.getDate()-6); ini.setHours(0,0,0,0);
+    const total = state.orders.filter(o=>{ const od=new Date(o.data); return od>=ini && od<=fim; }).reduce((s,o)=>s+o.total,0);
+    labels.push(ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    valores.push(total.toFixed(2));
+  }
+  if(charts.semanal) charts.semanal.destroy();
+  charts.semanal = new Chart(el, {type:"bar", data:{labels, datasets:[{label:"Faturamento (R$)", data:valores, backgroundColor:"#FFB703"}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+}
+function montarGraficoMensal(){
+  const el = document.getElementById("chartMensal");
+  if(typeof Chart==="undefined"){ el.parentElement.innerHTML = '<p class="grafico-erro">Gráfico não carregou (sem internet). Confira sua conexão e recarregue a página.</p>'; return; }
+  const labels = [], valores = [];
+  for(let i=11;i>=0;i--){
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const total = state.orders.filter(o=>{ const od=new Date(o.data); return od.getMonth()===d.getMonth() && od.getFullYear()===d.getFullYear(); }).reduce((s,o)=>s+o.total,0);
+    labels.push(d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}));
+    valores.push(total.toFixed(2));
+  }
+  if(charts.mensal) charts.mensal.destroy();
+  charts.mensal = new Chart(el, {type:"bar", data:{labels, datasets:[{label:"Faturamento (R$)", data:valores, backgroundColor:"#7A2E00"}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}});
+}
+function renderAgendaEncomendas(){
+  const box = document.getElementById("agendaEncomendas");
+  const agendados = state.orders.filter(o=>o.agendamento).sort((a,b)=> new Date(a.agendamento.data+"T"+a.agendamento.hora) - new Date(b.agendamento.data+"T"+b.agendamento.hora));
+  box.innerHTML = agendados.length===0? '<p class="vazio">Nenhuma encomenda agendada.</p>' :
+    agendados.map(o=>`<div class="admin-row"><div><strong>${o.agendamento.data} às ${o.agendamento.hora}</strong><br><span class="muted">${escapeHtml(o.cliente)}</span></div><div class="muted">${o.itens.map(i=>i.qty+'x '+i.nome).join(', ')}</div><div><strong>${brl(o.total)}</strong></div></div>`).join("");
+}
+
+/* ==================== ADMIN: PRODUTOS ==================== */
+function parseParesTexto(txt, campos){
+  if(!txt || !txt.trim()) return [];
+  return txt.split(",").map(s=>s.trim()).filter(Boolean).map(par=>{
+    const [nome, valor] = par.split(":").map(x=>x&&x.trim());
+    const obj = {}; obj[campos[0]] = nome; obj[campos[1]] = parseFloat(valor)||0; return obj;
+  });
+}
+function novoProdutoForm(){
+  editingProductId = null;
+  ["prodNome","prodPreco","prodDescricao","prodIcone","prodFoto","prodPeso","prodEstoque","prodIngredientes","prodAlergenicos","prodCalorias","prodProteinas","prodCarboidratos","prodGorduras","prodTamanhos","prodAdicionais"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("prodCategoria").value = "Salgados";
+  document.getElementById("prodTamanhos").value = "Único:0";
+  document.getElementById("prodDestaque").checked = false;
+  document.getElementById("prodDisponivel").checked = true;
+  document.getElementById("tituloFormProduto").textContent = "Novo produto";
+  atualizarPreviewFotoProduto();
+}
+/* Lê a foto escolhida no celular/computador e converte para uso direto no produto (sem precisar de link). */
+function carregarFotoDoDispositivo(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024){ toast("Escolha uma foto de até 2MB."); event.target.value=""; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById("prodFoto").value = e.target.result;
+    atualizarPreviewFotoProduto();
+    toast("Foto carregada! Clique em Salvar produto para confirmar.");
+  };
+  reader.readAsDataURL(file);
+  event.target.value = "";
+}
+function atualizarPreviewFotoProduto(){
+  const val = document.getElementById("prodFoto").value.trim();
+  const img = document.getElementById("prodFotoPreview");
+  if(val){ img.src = val; img.style.display = "inline-block"; } else { img.src=""; img.style.display="none"; }
+}
+document.getElementById("prodFoto").addEventListener("input", atualizarPreviewFotoProduto);
+function editarProduto(id){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  editingProductId = id;
+  document.getElementById("prodNome").value = p.nome;
+  document.getElementById("prodCategoria").value = p.categoria;
+  document.getElementById("prodPreco").value = p.preco;
+  document.getElementById("prodPeso").value = p.peso||"";
+  document.getElementById("prodEstoque").value = typeof p.estoque==='number'?p.estoque:"";
+  document.getElementById("prodDescricao").value = p.descricao || "";
+  document.getElementById("prodIcone").value = p.icone || "";
+  document.getElementById("prodFoto").value = p.foto || "";
+  atualizarPreviewFotoProduto();
+  document.getElementById("prodIngredientes").value = (p.ingredientes||[]).join(", ");
+  document.getElementById("prodAlergenicos").value = (p.alergenicos||[]).join(", ");
+  document.getElementById("prodCalorias").value = (p.nutricional&&p.nutricional.calorias)||"";
+  document.getElementById("prodProteinas").value = (p.nutricional&&p.nutricional.proteinas)||"";
+  document.getElementById("prodCarboidratos").value = (p.nutricional&&p.nutricional.carboidratos)||"";
+  document.getElementById("prodGorduras").value = (p.nutricional&&p.nutricional.gorduras)||"";
+  document.getElementById("prodTamanhos").value = (p.tamanhos||[]).map(t=>t.nome+":"+t.delta).join(", ");
+  document.getElementById("prodAdicionais").value = (p.adicionais||[]).map(a=>a.nome+":"+a.preco).join(", ");
+  document.getElementById("prodDestaque").checked = !!p.destaque;
+  document.getElementById("prodDisponivel").checked = p.disponivel !== false;
+  document.getElementById("tituloFormProduto").textContent = "Editar produto";
+}
+function salvarProduto(){
+  const nome = document.getElementById("prodNome").value.trim();
+  const preco = parseFloat(document.getElementById("prodPreco").value);
+  if(!nome || isNaN(preco)){ toast("Preencha nome e preço corretamente."); return; }
+  const estoqueVal = document.getElementById("prodEstoque").value;
+  const dados = {
+    nome,
+    categoria: document.getElementById("prodCategoria").value.trim() || "Geral",
+    preco,
+    peso: parseFloat(document.getElementById("prodPeso").value) || 0,
+    estoque: estoqueVal===""? null : parseInt(estoqueVal),
+    descricao: document.getElementById("prodDescricao").value.trim(),
+    icone: document.getElementById("prodIcone").value.trim() || "🍽️",
+    foto: document.getElementById("prodFoto").value.trim(),
+    ingredientes: document.getElementById("prodIngredientes").value.split(",").map(s=>s.trim()).filter(Boolean),
+    alergenicos: document.getElementById("prodAlergenicos").value.split(",").map(s=>s.trim()).filter(Boolean),
+    nutricional: {
+      calorias: parseFloat(document.getElementById("prodCalorias").value)||0,
+      proteinas: parseFloat(document.getElementById("prodProteinas").value)||0,
+      carboidratos: parseFloat(document.getElementById("prodCarboidratos").value)||0,
+      gorduras: parseFloat(document.getElementById("prodGorduras").value)||0
+    },
+    tamanhos: parseParesTexto(document.getElementById("prodTamanhos").value, ["nome","delta"]),
+    adicionais: parseParesTexto(document.getElementById("prodAdicionais").value, ["nome","preco"]),
+    destaque: document.getElementById("prodDestaque").checked,
+    disponivel: document.getElementById("prodDisponivel").checked
+  };
+  if(dados.tamanhos.length===0) dados.tamanhos = [{nome:"Único",delta:0}];
+  if(typeof dados.estoque === "number" && dados.estoque<=0) dados.disponivel = false;
+  if(editingProductId){
+    Object.assign(state.products.find(x=>x.id===editingProductId), dados);
+    logAlteracao("Editou o produto \"" + nome + "\"");
+  } else {
+    state.products.push({id: uid("prod"), criadoEm: new Date().toISOString(), ...dados});
+    logAlteracao("Cadastrou o produto \"" + nome + "\"");
+  }
+  novoProdutoForm();
+  renderTudo();
+  toast("Produto salvo!");
+}
+function removerProduto(id){
+  if(!confirm("Remover este produto?")) return;
+  const p = state.products.find(x=>x.id===id);
+  state.products = state.products.filter(x=>x.id!==id);
+  logAlteracao("Removeu o produto \"" + (p?p.nome:id) + "\"");
+  renderTudo();
+}
+function renderAdminProdutos(){
+  const box = document.getElementById("listaProdutosAdmin");
+  if(state.products.length===0){ box.innerHTML = '<p class="vazio">Nenhum produto cadastrado.</p>'; return; }
+  box.innerHTML = state.products.map(p => `
+    <div class="admin-row">
+      <div><strong>${escapeHtml(p.nome)}</strong> <span class="muted">(${p.id})</span><br>
+        <span class="chip">${escapeHtml(p.categoria)}</span>
+        ${p.destaque ? '<span class="chip chip-destaque">Destaque</span>' : ''}
+        ${p.disponivel===false ? '<span class="chip chip-off">Esgotado</span>' : ''}
+        <span class="chip">Estoque: ${typeof p.estoque==='number'?p.estoque:'∞'}</span>
+      </div>
+      <div>${brl(p.preco)}</div>
+      <div class="admin-row-actions">
+        <button onclick="editarProduto('${p.id}')">Editar</button>
+        <button class="btn-danger" onclick="removerProduto('${p.id}')">Remover</button>
+      </div>
+    </div>
+  `).join("");
+}
+function exportarProdutosExcel(){
+  const dados = state.products.map(p=>({id:p.id, nome:p.nome, categoria:p.categoria, preco:p.preco, descricao:p.descricao, estoque:p.estoque, peso:p.peso, disponivel:p.disponivel}));
+  const ws = XLSX.utils.json_to_sheet(dados);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Produtos");
+  XLSX.writeFile(wb, "produtos.xlsx");
+}
+function importarProdutosExcel(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:"binary"});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const linhas = XLSX.utils.sheet_to_json(ws);
+      let importados = 0;
+      linhas.forEach(l=>{
+        if(!l.nome || isNaN(parseFloat(l.preco))) return;
+        state.products.push({
+          id: uid("prod"), nome: String(l.nome), categoria: String(l.categoria||"Geral"),
+          preco: parseFloat(l.preco), descricao: String(l.descricao||""), icone: String(l.icone||"🍽️"),
+          foto: String(l.foto||""), estoque: l.estoque!==undefined? parseInt(l.estoque) : null,
+          peso: parseFloat(l.peso)||0, ingredientes:[], alergenicos:[], nutricional:{},
+          tamanhos:[{nome:"Único",delta:0}], adicionais:[], destaque:false, disponivel:true, criadoEm:new Date().toISOString()
+        });
+        importados++;
+      });
+      logAlteracao("Importou " + importados + " produtos via planilha");
+      renderTudo();
+      toast(importados + " produto(s) importado(s)!");
+    }catch(err){ toast("Não foi possível ler a planilha."); }
+  };
+  reader.readAsBinaryString(file);
+  event.target.value = "";
+}
+function exportarPedidosExcel(){
+  const dados = state.orders.map(o=>({codigo:o.codigo, data:o.data, cliente:o.cliente, telefone:o.telefone, total:o.total, status:o.status, tipoEntrega:o.tipoEntrega, itens:o.itens.map(i=>i.qty+"x "+i.nome).join("; ")}));
+  const ws = XLSX.utils.json_to_sheet(dados);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
+  XLSX.writeFile(wb, "pedidos.xlsx");
+}
+
+/* ==================== ADMIN: CUPONS ==================== */
+function novoCupomForm(){
+  editingCouponId = null;
+  document.getElementById("cupCodigo").value = "";
+  document.getElementById("cupValor").value = "";
+  document.getElementById("cupValidade").value = "";
+  document.getElementById("cupTipo").value = "manual";
+  document.getElementById("cupAtivo").checked = true;
+  document.getElementById("tituloFormCupom").textContent = "Novo cupom";
+}
+function editarCupom(id){
+  const c = state.coupons.find(x=>x.id===id);
+  if(!c) return;
+  editingCouponId = id;
+  document.getElementById("cupCodigo").value = c.codigo;
+  document.getElementById("cupValor").value = c.valor;
+  document.getElementById("cupValidade").value = c.validade;
+  document.getElementById("cupTipo").value = c.tipo||"manual";
+  document.getElementById("cupAtivo").checked = c.ativo;
+  document.getElementById("tituloFormCupom").textContent = "Editar cupom";
+}
+function salvarCupom(){
+  const codigo = document.getElementById("cupCodigo").value.trim().toUpperCase();
+  const valor = parseFloat(document.getElementById("cupValor").value);
+  const validade = document.getElementById("cupValidade").value;
+  if(!codigo || isNaN(valor) || !validade){ toast("Preencha todos os campos do cupom."); return; }
+  const dados = {codigo, valor, validade, tipo:document.getElementById("cupTipo").value, ativo: document.getElementById("cupAtivo").checked};
+  if(editingCouponId){
+    Object.assign(state.coupons.find(x=>x.id===editingCouponId), dados);
+    logAlteracao("Editou o cupom " + codigo);
+  } else {
+    state.coupons.push({id: uid("cup"), ...dados});
+    logAlteracao("Criou o cupom " + codigo);
+  }
+  novoCupomForm();
+  renderTudo();
+  toast("Cupom salvo!");
+}
+function removerCupom(id){
+  if(!confirm("Remover este cupom?")) return;
+  const c = state.coupons.find(x=>x.id===id);
+  state.coupons = state.coupons.filter(x=>x.id!==id);
+  logAlteracao("Removeu o cupom " + (c?c.codigo:id));
+  renderTudo();
+}
+function gerarCuponsAniversario(){
+  const mesAtual = new Date().getMonth();
+  let gerados = 0;
+  Object.values(state.customers).forEach(cl=>{
+    if(!cl.aniversario) return;
+    const mesAniv = new Date(cl.aniversario+"T00:00:00").getMonth();
+    if(mesAniv===mesAtual){
+      const codigo = "ANIV" + cl.telefone.slice(-4);
+      if(!state.coupons.find(c=>c.codigo===codigo)){
+        const validade = new Date(); validade.setDate(validade.getDate()+30);
+        state.coupons.push({id:uid("cup"), codigo, valor:15, validade:validade.toISOString().slice(0,10), ativo:true, tipo:"aniversario"});
+        gerados++;
+      }
+    }
+  });
+  logAlteracao("Gerou " + gerados + " cupons de aniversário");
+  renderTudo();
+  toast(gerados>0 ? gerados+" cupom(ns) de aniversário gerado(s)!" : "Nenhum aniversariante este mês.");
+}
+function renderAdminCupons(){
+  const box = document.getElementById("listaCuponsAdmin");
+  if(state.coupons.length===0){ box.innerHTML = '<p class="vazio">Nenhum cupom cadastrado.</p>'; return; }
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  box.innerHTML = state.coupons.map(c => {
+    const expirado = new Date(c.validade+"T23:59:59") < hoje;
+    return `
+    <div class="admin-row">
+      <div><strong>${escapeHtml(c.codigo)}</strong><br>
+        <span class="chip">-${c.valor}%</span>
+        <span class="chip">${c.tipo||'manual'}</span>
+        ${c.ativo ? '' : '<span class="chip chip-off">Inativo</span>'}
+        ${expirado ? '<span class="chip chip-off">Expirado</span>' : ''}
+      </div>
+      <div class="muted">Válido até ${new Date(c.validade+"T00:00:00").toLocaleDateString('pt-BR')}</div>
+      <div class="admin-row-actions">
+        <button onclick="editarCupom('${c.id}')">Editar</button>
+        <button class="btn-danger" onclick="removerCupom('${c.id}')">Remover</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ==================== ADMIN: MARKETING ==================== */
+function renderMarketingAdmin(){
+  document.getElementById("listaBanners").innerHTML = (state.config.banners||[]).map((b,i)=>
+    `<div class="admin-row"><div>${escapeHtml(b)}</div><div></div><div class="admin-row-actions"><button class="btn-danger" onclick="removerBanner(${i})">Remover</button></div></div>`
+  ).join("") || '<p class="vazio">Nenhum banner.</p>';
+  document.getElementById("comboAtivo").checked = !!state.config.combo.ativo;
+  document.getElementById("comboNome").value = state.config.combo.nome||"";
+  document.getElementById("comboDesconto").value = state.config.combo.desconto||"";
+  document.getElementById("comboProdutos").value = (state.config.combo.produtos||[]).join(",");
+  document.getElementById("promoTexto").value = state.config.promoTexto||"";
+  document.getElementById("promoFimInput").value = state.config.promoFim ? state.config.promoFim.slice(0,16) : "";
+  document.getElementById("popupAtivo").checked = !!state.config.popup.ativo;
+  document.getElementById("popupCodigo").value = state.config.popup.codigo||"";
+  document.getElementById("popupAtraso").value = state.config.popup.atraso||8;
+  document.getElementById("indicacaoDesconto").value = state.config.indicacaoDesconto||0;
+}
+function adicionarBanner(){
+  const txt = document.getElementById("novoBannerTexto").value.trim();
+  if(!txt) return;
+  state.config.banners.push(txt);
+  document.getElementById("novoBannerTexto").value = "";
+  logAlteracao("Adicionou banner promocional");
+  renderTudo();
+}
+function removerBanner(i){ state.config.banners.splice(i,1); renderTudo(); }
+function salvarCombo(){
+  state.config.combo = {
+    ativo: document.getElementById("comboAtivo").checked,
+    nome: document.getElementById("comboNome").value.trim(),
+    desconto: parseFloat(document.getElementById("comboDesconto").value)||0,
+    produtos: document.getElementById("comboProdutos").value.split(",").map(s=>s.trim()).filter(Boolean)
+  };
+  logAlteracao("Atualizou o combo do dia");
+  renderTudo();
+  toast("Combo do dia salvo!");
+}
+function salvarPromoCountdown(){
+  state.config.promoTexto = document.getElementById("promoTexto").value.trim();
+  const v = document.getElementById("promoFimInput").value;
+  state.config.promoFim = v ? new Date(v).toISOString() : null;
+  logAlteracao("Atualizou contagem regressiva de promoção");
+  renderTudo();
+  toast("Contagem regressiva salva!");
+}
+function limparPromoCountdown(){
+  state.config.promoFim = null; state.config.promoTexto = "";
+  renderTudo();
+}
+function salvarPopupConfig(){
+  state.config.popup = {
+    ativo: document.getElementById("popupAtivo").checked,
+    codigo: document.getElementById("popupCodigo").value.trim() || "BEMVINDO10",
+    atraso: parseInt(document.getElementById("popupAtraso").value)||8
+  };
+  logAlteracao("Atualizou pop-up de desconto");
+  salvarEstado();
+  toast("Pop-up salvo!");
+}
+function salvarIndicacaoConfig(){
+  state.config.indicacaoDesconto = parseFloat(document.getElementById("indicacaoDesconto").value)||0;
+  logAlteracao("Atualizou desconto de indicação");
+  salvarEstado();
+  toast("Configuração de indicação salva!");
+}
+
+/* ==================== ADMIN: ENTREGA ==================== */
+const diasSemana = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+function renderEntregaAdmin(){
+  document.getElementById("cfgEnderecoLoja").value = state.config.enderecoLoja||"";
+  document.getElementById("cfgTempoRetiradaMin").value = state.config.tempoRetirada.min;
+  document.getElementById("cfgTempoRetiradaMax").value = state.config.tempoRetirada.max;
+  document.getElementById("cfgTempoEntregaMin").value = state.config.tempoEntrega.min;
+  document.getElementById("cfgTempoEntregaMax").value = state.config.tempoEntrega.max;
+  document.getElementById("listaBairros").innerHTML = (state.config.bairros||[]).map((b,i)=>
+    `<div class="admin-row"><div><strong>${escapeHtml(b.nome)}</strong></div><div>${brl(b.taxa)} ${b.freteGratis>0?'· grátis acima de '+brl(b.freteGratis):''}</div><div class="admin-row-actions"><button class="btn-danger" onclick="removerBairro(${i})">Remover</button></div></div>`
+  ).join("") || '<p class="vazio">Nenhum bairro cadastrado.</p>';
+  const grade = document.getElementById("gradeHorarios");
+  grade.innerHTML = diasSemana.map((d,i)=>{
+    const h = state.config.horarios[i];
+    return `<div class="admin-row" style="grid-template-columns:1fr auto auto auto;">
+      <div>${d}</div>
+      <div><input type="checkbox" id="horAberto${i}" ${h.aberto?'checked':''} style="width:auto;"></div>
+      <div><input type="time" id="horIni${i}" value="${h.ini}"></div>
+      <div><input type="time" id="horFim${i}" value="${h.fim}"></div>
+    </div>`;
+  }).join("");
+}
+function salvarEnderecoLoja(){
+  state.config.enderecoLoja = document.getElementById("cfgEnderecoLoja").value.trim();
+  logAlteracao("Atualizou endereço da loja");
+  renderTudo();
+  toast("Endereço salvo!");
+}
+function salvarTemposConfig(){
+  state.config.tempoRetirada = {min:parseInt(document.getElementById("cfgTempoRetiradaMin").value)||0, max:parseInt(document.getElementById("cfgTempoRetiradaMax").value)||0};
+  state.config.tempoEntrega = {min:parseInt(document.getElementById("cfgTempoEntregaMin").value)||0, max:parseInt(document.getElementById("cfgTempoEntregaMax").value)||0};
+  logAlteracao("Atualizou tempos estimados");
+  renderTudo();
+  toast("Tempos salvos!");
+}
+function adicionarBairro(){
+  const nome = document.getElementById("bairroNome").value.trim();
+  const taxa = parseFloat(document.getElementById("bairroTaxa").value);
+  const freteGratis = parseFloat(document.getElementById("bairroFreteGratis").value)||0;
+  if(!nome || isNaN(taxa)){ toast("Preencha bairro e taxa."); return; }
+  const existente = state.config.bairros.find(b=>b.nome.toLowerCase()===nome.toLowerCase());
+  if(existente){ Object.assign(existente, {taxa, freteGratis}); }
+  else state.config.bairros.push({nome, taxa, freteGratis});
+  document.getElementById("bairroNome").value=""; document.getElementById("bairroTaxa").value=""; document.getElementById("bairroFreteGratis").value="";
+  logAlteracao("Atualizou taxa de entrega do bairro " + nome);
+  renderTudo();
+}
+function removerBairro(i){ state.config.bairros.splice(i,1); renderTudo(); }
+function salvarHorarios(){
+  diasSemana.forEach((d,i)=>{
+    state.config.horarios[i] = {
+      aberto: document.getElementById("horAberto"+i).checked,
+      ini: document.getElementById("horIni"+i).value,
+      fim: document.getElementById("horFim"+i).value
+    };
+  });
+  logAlteracao("Atualizou horário de funcionamento");
+  renderTudo();
+  toast("Horários salvos!");
+}
+
+/* ==================== ADMIN: CONFIGURAÇÕES ==================== */
+function preencherConfigForm(){
+  const c = state.config;
+  document.getElementById("cfgNome").value = c.storeName;
+  document.getElementById("cfgTagline").value = c.tagline;
+  document.getElementById("cfgWhats").value = c.whatsappNumber;
+  document.getElementById("cfgWhatsGrupo").value = c.whatsappGroupLink;
+  document.getElementById("cfgInsta").value = c.instagramLink;
+  document.getElementById("cfgPix").value = c.pixKey;
+  document.getElementById("cfgEntrega").value = c.deliveryFee;
+  document.getElementById("cfgEntregaGratis").value = c.freeDeliveryMin;
+  document.getElementById("cfgTaxaCredito").value = c.creditFeePercent;
+  document.getElementById("cfgTaxaDebito").value = c.debitFeePercent;
+  document.getElementById("cfgSenha").value = c.adminPassword;
+  document.getElementById("cfgPontosPorReal").value = c.pontosPorReal;
+  document.getElementById("cfgPontosParaResgate").value = c.pontosParaResgate;
+  document.getElementById("cfgValorResgate").value = c.valorResgate;
+  document.getElementById("listaBrindes").innerHTML = (c.brindes||[]).map((b,i)=>
+    `<div class="admin-row"><div>A partir de ${brl(b.valorMinimo)}</div><div>${escapeHtml(b.nome)}</div><div class="admin-row-actions"><button class="btn-danger" onclick="removerBrinde(${i})">Remover</button></div></div>`
+  ).join("") || '<p class="vazio">Nenhum brinde configurado.</p>';
+}
+function adicionarBrinde(){
+  const valorMinimo = parseFloat(document.getElementById("brindeValor").value);
+  const nome = document.getElementById("brindeNome").value.trim();
+  if(isNaN(valorMinimo) || !nome){ toast("Preencha valor e nome do brinde."); return; }
+  state.config.brindes.push({valorMinimo, nome});
+  document.getElementById("brindeValor").value=""; document.getElementById("brindeNome").value="";
+  logAlteracao("Adicionou brinde automático: " + nome);
+  renderTudo();
+}
+function removerBrinde(i){ state.config.brindes.splice(i,1); renderTudo(); }
+function salvarConfig(){
+  const deliveryFee = parseFloat(document.getElementById("cfgEntrega").value);
+  const freeDeliveryMin = parseFloat(document.getElementById("cfgEntregaGratis").value);
+  const creditFeePercent = parseFloat(document.getElementById("cfgTaxaCredito").value);
+  const debitFeePercent = parseFloat(document.getElementById("cfgTaxaDebito").value);
+  if([deliveryFee, freeDeliveryMin, creditFeePercent, debitFeePercent].some(isNaN)){
+    toast("Verifique os campos numéricos de taxas e entrega.");
+    return;
+  }
+  state.config = {
+    ...state.config,
+    storeName: document.getElementById("cfgNome").value.trim() || state.config.storeName,
+    tagline: document.getElementById("cfgTagline").value.trim(),
+    whatsappNumber: document.getElementById("cfgWhats").value.trim(),
+    whatsappGroupLink: document.getElementById("cfgWhatsGrupo").value.trim(),
+    instagramLink: document.getElementById("cfgInsta").value.trim(),
+    pixKey: document.getElementById("cfgPix").value.trim(),
+    deliveryFee, freeDeliveryMin, creditFeePercent, debitFeePercent,
+    adminPassword: document.getElementById("cfgSenha").value.trim() || state.config.adminPassword,
+    pontosPorReal: parseFloat(document.getElementById("cfgPontosPorReal").value)||0,
+    pontosParaResgate: parseInt(document.getElementById("cfgPontosParaResgate").value)||0,
+    valorResgate: parseFloat(document.getElementById("cfgValorResgate").value)||0
+  };
+  logAlteracao("Atualizou configurações gerais da loja");
+  renderTudo();
+  toast("Configurações salvas!");
+}
+
+/* ==================== ADMIN: CLIENTES ==================== */
+function renderAdminClientes(){
+  const box = document.getElementById("listaClientesAdmin");
+  const arr = Object.values(state.customers);
+  if(arr.length===0){ box.innerHTML = '<p class="vazio">Nenhum cliente ainda. Assim que os pedidos chegarem, o histórico aparece aqui.</p>'; return; }
+  box.innerHTML = arr.map(cl => {
+    const freq = {};
+    cl.pedidos.forEach(p => p.itens.forEach(it => { freq[it.nome] = (freq[it.nome]||0) + it.qty; }));
+    const top = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const ultima = cl.pedidos[cl.pedidos.length-1];
+    return `
+      <div class="admin-row cliente-row">
+        <div><strong>${escapeHtml(cl.nome)}</strong><br><span class="muted">${escapeHtml(cl.telefone)}</span><br><span class="chip">${cl.pontos||0} pontos</span></div>
+        <div>${cl.pedidos.length} pedido(s)<br><span class="muted">Último: ${new Date(ultima.data).toLocaleDateString('pt-BR')}</span></div>
+        <div class="chips-wrap">${top.map(([n,q])=>`<span class="chip">${escapeHtml(n)} x${q}</span>`).join(" ") || "-"}</div>
+      </div>`;
+  }).join("");
+}
+
+/* ==================== ADMIN: FUNCIONÁRIOS ==================== */
+function novoFuncionarioForm(){
+  editingFuncionarioId = null;
+  document.getElementById("funcNome").value = "";
+  document.getElementById("funcUsuario").value = "";
+  document.getElementById("funcSenha").value = "";
+  document.getElementById("funcNivel").value = "atendente";
+  document.getElementById("tituloFormFuncionario").textContent = "Novo funcionário";
+}
+function editarFuncionario(id){
+  const f = state.employees.find(x=>x.id===id);
+  if(!f) return;
+  editingFuncionarioId = id;
+  document.getElementById("funcNome").value = f.nome;
+  document.getElementById("funcUsuario").value = f.usuario;
+  document.getElementById("funcSenha").value = f.senha;
+  document.getElementById("funcNivel").value = f.nivel;
+  document.getElementById("tituloFormFuncionario").textContent = "Editar funcionário";
+}
+function salvarFuncionario(){
+  const nome = document.getElementById("funcNome").value.trim();
+  const usuario = document.getElementById("funcUsuario").value.trim();
+  const senha = document.getElementById("funcSenha").value;
+  const nivel = document.getElementById("funcNivel").value;
+  if(!nome || !usuario || !senha){ toast("Preencha todos os campos."); return; }
+  const dados = {nome, usuario, senha, nivel};
+  if(editingFuncionarioId){
+    Object.assign(state.employees.find(x=>x.id===editingFuncionarioId), dados);
+    logAlteracao("Editou o funcionário " + nome);
+  } else {
+    state.employees.push({id: uid("func"), ...dados});
+    logAlteracao("Cadastrou o funcionário " + nome);
+  }
+  novoFuncionarioForm();
+  renderAdminFuncionarios();
+  salvarEstado();
+  toast("Funcionário salvo!");
+}
+function removerFuncionario(id){
+  if(!confirm("Remover este funcionário?")) return;
+  state.employees = state.employees.filter(x=>x.id!==id);
+  logAlteracao("Removeu um funcionário");
+  renderAdminFuncionarios();
+  salvarEstado();
+}
+function renderAdminFuncionarios(){
+  const box = document.getElementById("listaFuncionariosAdmin");
+  if(!box) return;
+  box.innerHTML = state.employees.map(f=>`
+    <div class="admin-row">
+      <div><strong>${escapeHtml(f.nome)}</strong><br><span class="muted">@${escapeHtml(f.usuario)}</span></div>
+      <div><span class="chip">${escapeHtml(f.nivel)}</span></div>
+      <div class="admin-row-actions">
+        <button onclick="editarFuncionario('${f.id}')">Editar</button>
+        <button class="btn-danger" onclick="removerFuncionario('${f.id}')">Remover</button>
+      </div>
+    </div>
+  `).join("") || '<p class="vazio">Nenhum funcionário cadastrado.</p>';
+}
+
+/* ==================== ADMIN: HISTÓRICO ==================== */
+function renderHistorico(){
+  const box = document.getElementById("listaHistorico");
+  if(!box) return;
+  box.innerHTML = state.changeLog.length===0 ? '<p class="vazio">Nenhuma alteração registrada ainda.</p>' :
+    state.changeLog.slice(0,100).map(h=>`<div class="admin-row" style="grid-template-columns:1fr auto;"><div>${escapeHtml(h.acao)} <span class="muted">— ${escapeHtml(h.usuario)}</span></div><div class="muted">${new Date(h.data).toLocaleString('pt-BR')}</div></div>`).join("");
+}
+
+/* ==================== ADMIN: PEDIDOS ==================== */
+function renderAdminPedidos(){
+  const box = document.getElementById("listaPedidosAdmin");
+  if(state.orders.length===0){ box.innerHTML = '<p class="vazio">Nenhum pedido registrado ainda.</p>'; return; }
+  const corStatus = {Pendente:"var(--danger)", Preparando:"var(--gold)", Pronto:"var(--orange)", Entregue:"var(--success)"};
+  box.innerHTML = state.orders.map(p => {
+    const lugar = p.tipoEntrega==="entrega"
+      ? ("📍 " + escapeHtml(p.endereco||"") + (p.bairro? (" - "+escapeHtml(p.bairro)) : ""))
+      : "🏠 Retirada no local";
+    return `
+    <div class="admin-row pedido-row">
+      <div><strong>${escapeHtml(p.cliente)}</strong> <span class="muted">${p.codigo||''}</span><br><span class="muted">📞 ${escapeHtml(p.telefone||'')}</span><br><span class="muted">${lugar}</span><br><span class="muted">${new Date(p.data).toLocaleString('pt-BR')}</span>${p.agendamento?'<br><span class="chip">Agendado: '+p.agendamento.data+' '+p.agendamento.hora+'</span>':''}</div>
+      <div class="muted">${p.itens.map(it=>`${it.qty}x ${escapeHtml(it.nome)}`).join(", ")}</div>
+      <div><strong>${brl(p.total)}</strong></div>
+      <div>
+        <span class="chip" style="background:${corStatus[p.status]||'var(--ink-soft)'};color:#fff;">${p.status}</span>
+        <select onchange="atualizarStatusPedido('${p.id}', this.value)" style="margin-top:6px;">
+          ${["Pendente","Preparando","Pronto","Entregue"].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+  `;}).join("");
+}
+function atualizarStatusPedido(id, status){
+  const p = state.orders.find(x=>x.id===id);
+  if(p){
+    p.status = status;
+    p.historicoStatus = p.historicoStatus || [];
+    p.historicoStatus.push({status, data:new Date().toISOString()});
+    logAlteracao("Alterou status do pedido " + (p.codigo||id) + " para " + status);
+    salvarEstado();
+    toast("Status do pedido atualizado.");
+  }
+}
+
+/* ==================== BACKUP ==================== */
+function baixarBackup(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "backup-loja.json"; a.click();
+  URL.revokeObjectURL(url);
+  toast("Backup baixado!");
+}
+function importarBackup(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const novo = JSON.parse(e.target.result);
+      state = novo;
+      cart = [];
+      appliedCoupon = null;
+      salvarEstado();
+      renderTudo();
+      toast("Backup importado com sucesso!");
+    } catch(err){
+      toast("Arquivo inválido.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+/* ==================== INÍCIO ==================== */
+renderTudo();
+mostrarPopupDesconto();
+iniciarSincronizacaoNuvem();
+(function(){
+  const badge = document.getElementById("statusNuvemBadge");
+  if(!badge) return;
+  badge.style.color = firebaseOk ? "var(--success)" : "var(--danger)";
+  badge.textContent = firebaseOk
+    ? "☁️ Sincronização com a nuvem (Firebase) está ativa — os dados aparecem em todos os aparelhos."
+    : "☁️ Sincronização com a nuvem ainda não configurada (opcional, veja instruções acima).";
+})();
+</script>
+</body>
+</html>
